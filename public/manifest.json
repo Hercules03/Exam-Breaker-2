@@ -1,0 +1,75 @@
+{
+  "name": "Exam Breaker - Multiple Choice Revision Companion",
+  "short_name": "Exam Breaker",
+  "description": "Study multiple choice questions offline. Track your progress, master any exam.",
+  "start_url": "/Exam-Breaker/",
+  "scope": "/Exam-Breaker/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#2563eb",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%232563eb' width='192' height='192'/><text y='145' font-size='140' font-family='Arial' text-anchor='middle' x='96'>📚</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect fill='%232563eb' width='512' height='512'/><text y='385' font-size='380' font-family='Arial' text-anchor='middle' x='256'>📚</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "productivity"],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%23f3f4f6' width='540' height='720'/><text y='360' font-size='200' font-family='Arial' text-anchor='middle' x='270'>📚 Exam Breaker</text></svg>",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Pick Random Question",
+      "short_name": "Random Q",
+      "description": "Pick a random unanswered question",
+      "url": "/Exam-Breaker/?action=random",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%232563eb' width='96' height='96'/><text y='72' font-size='70' font-family='Arial' text-anchor='middle' x='48'>🎲</text></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "View Progress",
+      "short_name": "Progress",
+      "description": "Check your progress and statistics",
+      "url": "/Exam-Breaker/?action=progress",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%232563eb' width='96' height='96'/><text y='72' font-size='70' font-family='Arial' text-anchor='middle' x='48'>📊</text></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Import Questions",
+      "short_name": "Import",
+      "description": "Import questions from CSV",
+      "url": "/Exam-Breaker/?action=import",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%232563eb' width='96' height='96'/><text y='72' font-size='70' font-family='Arial' text-anchor='middle' x='48'>📥</text></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ]
+}
