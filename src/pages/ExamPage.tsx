@@ -6,6 +6,7 @@ import { useDomains } from '../hooks/useQuestions';
 import { useScrollDirection } from '../hooks/useScrollDirection';
 import { ExamConfig } from '../types/index';
 import { PageType } from '../App';
+import LatexText from '../components/LatexText';
 
 interface ExamPageProps {
   onNavigate: (page: PageType, questionId?: number, domain?: string) => void;
@@ -379,7 +380,7 @@ function ExamQuestion({ questionId, selectedAnswer, onSelect }: {
         </span>
       </div>
       <h2 className="text-xl md:text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-8 leading-relaxed">
-        {question.stem}
+        <LatexText>{question.stem}</LatexText>
       </h2>
       <div className="space-y-3">
         {options.map((option) => {
@@ -404,7 +405,7 @@ function ExamQuestion({ questionId, selectedAnswer, onSelect }: {
                 </div>
                 <div className="flex-1 pt-1.5 md:pt-2">
                   <p className={`font-medium ${isSelected ? 'text-blue-900 dark:text-blue-100' : 'text-slate-900 dark:text-slate-100'}`}>
-                    {question[`option${option}`]}
+                    <LatexText>{question[`option${option}`]}</LatexText>
                   </p>
                 </div>
               </div>

@@ -6,6 +6,7 @@ import { useBookmark } from '../hooks/useBookmarks';
 import { PageType, NavigationMode } from '../App';
 import { QuestionService } from '../services/QuestionService';
 import { AnswerService } from '../services/AnswerService';
+import LatexText from '../components/LatexText';
 
 /**
  * Render multi-line text with bullet point formatting
@@ -27,7 +28,7 @@ function FormattedText({ text }: { text: string }) {
           return (
             <div key={idx} className="ml-4 flex gap-3">
               <span className="text-slate-400 flex-shrink-0">•</span>
-              <span>{content}</span>
+              <LatexText>{content}</LatexText>
             </div>
           );
         }
@@ -37,7 +38,7 @@ function FormattedText({ text }: { text: string }) {
           return (
             <div key={idx} className="ml-6 flex gap-3">
               <span className="text-slate-400 flex-shrink-0">•</span>
-              <span>{content}</span>
+              <LatexText>{content}</LatexText>
             </div>
           );
         }
@@ -45,7 +46,7 @@ function FormattedText({ text }: { text: string }) {
         if (trimmed.startsWith('➡')) {
           return (
             <p key={idx} className="text-slate-700 dark:text-slate-300 font-medium mt-2">
-              {trimmed}
+              <LatexText>{trimmed}</LatexText>
             </p>
           );
         }
@@ -58,14 +59,14 @@ function FormattedText({ text }: { text: string }) {
         if (optionHeaderMatch) {
           return (
             <p key={idx} className="font-semibold text-slate-900 dark:text-slate-100 mt-4">
-              {trimmed}
+              <LatexText>{trimmed}</LatexText>
             </p>
           );
         }
 
         return (
           <p key={idx} className="text-slate-800 dark:text-slate-200">
-            {trimmed}
+            <LatexText>{trimmed}</LatexText>
           </p>
         );
       })}
@@ -320,7 +321,7 @@ export default function QuestionDetailPage({
         </div>
 
         <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 mb-8 leading-[1.4]">
-          {question.stem}
+          <LatexText>{question.stem}</LatexText>
         </h2>
 
         {/* Answer Options */}
@@ -378,7 +379,7 @@ export default function QuestionDetailPage({
                     {option}
                   </div>
                   <div className="flex-1 pt-1.5 md:pt-2.5">
-                    <p className={`font-semibold text-base md:text-lg leading-relaxed ${textColor}`}>{optionText}</p>
+                    <p className={`font-semibold text-base md:text-lg leading-relaxed ${textColor}`}><LatexText>{optionText}</LatexText></p>
                   </div>
                   {showExplanation && isCorrect && (
                     <CheckCircle className="w-7 h-7 text-emerald-500 flex-shrink-0 mt-2" />

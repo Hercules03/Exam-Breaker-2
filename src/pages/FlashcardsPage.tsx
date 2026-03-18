@@ -3,6 +3,7 @@ import { Loader, RotateCcw, ArrowLeft, ArrowRight, Shuffle, Layers, ChevronLeft 
 import { FlashcardService, Flashcard } from '../services/FlashcardService';
 import { useDomains } from '../hooks/useQuestions';
 import { PageType } from '../App';
+import LatexText from '../components/LatexText';
 
 interface FlashcardsPageProps {
   onNavigate: (page: PageType, questionId?: number, domain?: string) => void;
@@ -241,7 +242,7 @@ export default function FlashcardsPage({ onNavigate: _onNavigate, onBack }: Flas
                   Term
                 </span>
                 <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 leading-relaxed">
-                  {card.term}
+                  <LatexText>{card.term}</LatexText>
                 </h2>
                 <p className="text-sm text-slate-400 mt-6">Tap to reveal definition</p>
               </div>
@@ -258,7 +259,7 @@ export default function FlashcardsPage({ onNavigate: _onNavigate, onBack }: Flas
                   Definition
                 </span>
                 <p className="text-lg md:text-xl font-medium text-slate-800 dark:text-slate-200 leading-relaxed">
-                  {card.definition}
+                  <LatexText>{card.definition}</LatexText>
                 </p>
                 <div className="mt-6 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg">
                   <span className="text-xs font-medium text-slate-500">
