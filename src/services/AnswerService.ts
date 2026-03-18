@@ -15,7 +15,8 @@ export class AnswerService {
       throw new Error(`Question ${questionId} not found`);
     }
 
-    const isCorrect = selectedAnswer === question.correctAnswer;
+    const correctAnswers = question.correctAnswer.split(',');
+    const isCorrect = correctAnswers.includes(selectedAnswer);
 
     // Get attempt number
     const previousAnswers = await this.getAnswerHistory(questionId);

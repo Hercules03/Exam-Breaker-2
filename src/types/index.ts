@@ -5,7 +5,7 @@ export interface Question {
   optionB: string;
   optionC: string;
   optionD: string;
-  correctAnswer: 'A' | 'B' | 'C' | 'D';
+  correctAnswer: string; // Single "A" or multiple "A,B,D"
   domain: string;
   domainName: string;
   simplified: string;

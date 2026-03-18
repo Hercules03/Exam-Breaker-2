@@ -169,7 +169,11 @@ export class CSVParser {
     if (!id) { errors.push({ type: 'missingFieldId', row }); return; }
     if (!stem) { errors.push({ type: 'missingFieldQuestion', row }); return; }
     if (!optionA || !optionB || !optionC || !optionD) { errors.push({ type: 'missingFieldAnswer', row }); return; }
-    if (!correctAnswer || !VALID_ANSWERS.includes(correctAnswer.toUpperCase())) {
+    // Support single ("B") or multiple ("A,B,D") answers
+    const answerParts = correctAnswer
+      ? correctAnswer.toUpperCase().split(/[,\s]+/).map(a => a.trim()).filter(Boolean)
+      : [];
+    if (answerParts.length === 0 || !answerParts.every(a => VALID_ANSWERS.includes(a))) {
       errors.push({ type: 'invalidAnswerFormat', row, value: correctAnswer || '' }); return;
     }
     if (!domain) { errors.push({ type: 'missingFieldDomain', row }); return; }
@@ -181,7 +185,7 @@ export class CSVParser {
       optionB: optionB.trim(),
       optionC: optionC.trim(),
       optionD: optionD.trim(),
-      correctAnswer: correctAnswer.toUpperCase() as 'A' | 'B' | 'C' | 'D',
+      correctAnswer: answerParts.join(','),
       domain: domain.trim(),
       domainName: (domainName || '').trim(),
       simplified: (simplified || '').trim(),

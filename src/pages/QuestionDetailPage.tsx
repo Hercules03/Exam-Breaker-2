@@ -328,7 +328,8 @@ export default function QuestionDetailPage({
           {options.map((option) => {
             const optionText = question[`option${option}`];
             const isSelected = selectedAnswer === option;
-            const isCorrect = option === question.correctAnswer;
+            const correctAnswers = question.correctAnswer.split(',');
+            const isCorrect = correctAnswers.includes(option);
             const wasAnsweredIncorrectly =
               submitResult && !submitResult.isCorrect && isSelected;
 
@@ -421,7 +422,10 @@ export default function QuestionDetailPage({
               )}
             </div>
             <p className="text-slate-700 dark:text-slate-300 font-medium ml-10">
-              The correct answer is <strong>{question.correctAnswer}</strong>
+              {question.correctAnswer.includes(',')
+                ? <>The correct answers are <strong>{question.correctAnswer.split(',').join(', ')}</strong></>
+                : <>The correct answer is <strong>{question.correctAnswer}</strong></>
+              }
             </p>
           </div>
           

@@ -32,7 +32,8 @@ export class ExamService {
       if (!question) continue;
 
       const selectedAnswer = session.answers[questionId] || '';
-      const isCorrect = selectedAnswer === question.correctAnswer;
+      const correctAnswers = question.correctAnswer.split(',');
+      const isCorrect = correctAnswers.includes(selectedAnswer);
 
       questionResults.push({
         questionId,
