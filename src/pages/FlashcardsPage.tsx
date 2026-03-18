@@ -92,13 +92,6 @@ export default function FlashcardsPage({ onNavigate: _onNavigate, onBack }: Flas
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)] border border-slate-200/60 dark:border-slate-800/60 p-8">
           <div className="flex items-center gap-4 mb-8 pb-6 border-b border-slate-100 dark:border-slate-800/50">
-            <button
-              onClick={onBack}
-              className="p-2 -ml-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors active:scale-95"
-              aria-label="Go back"
-            >
-              <ChevronLeft className="w-6 h-6 text-slate-700 dark:text-slate-300" />
-            </button>
             <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-2xl">
               <Layers className="w-8 h-8 text-blue-600 dark:text-blue-500" />
             </div>
@@ -186,11 +179,11 @@ export default function FlashcardsPage({ onNavigate: _onNavigate, onBack }: Flas
       <div className="bg-white/90 dark:bg-[#1e293b]/90 backdrop-blur-md rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-4">
         <div className="flex items-center justify-between mb-3">
           <button
-            onClick={() => setStarted(false)}
+            onClick={onBack}
             className="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
-            Back
+            Exit
           </button>
           <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-3 py-1 rounded-lg text-sm font-bold tracking-wide">
             {currentIndex + 1} <span className="text-slate-400 font-medium">/ {cards.length}</span>

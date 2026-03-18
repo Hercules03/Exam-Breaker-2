@@ -93,9 +93,7 @@ function App() {
   };
 
   const isDetailPage = navigationState.page === 'detail';
-  const isExamPage = navigationState.page === 'exam';
-  const isFlashcardsPage = navigationState.page === 'flashcards';
-  const hideNav = isDetailPage || isExamPage || isFlashcardsPage;
+  const hideNav = isDetailPage;
 
   const navItems = [
     { page: 'list' as PageType, icon: Layers, label: 'Questions' },

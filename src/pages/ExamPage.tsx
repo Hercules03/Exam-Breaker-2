@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Timer, CheckCircle, XCircle, Loader, AlertCircle, Play, ListOrdered, Hash, ArrowLeft } from 'lucide-react';
+import { Timer, CheckCircle, XCircle, Loader, AlertCircle, Play, ListOrdered, Hash } from 'lucide-react';
 import { useExam } from '../hooks/useExam';
 import { useQuestion } from '../hooks/useQuestions';
 import { useDomains } from '../hooks/useQuestions';
@@ -17,7 +17,7 @@ function formatTime(seconds: number): string {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
-export default function ExamPage({ onNavigate, onBack }: ExamPageProps) {
+export default function ExamPage({ onNavigate, onBack: _onBack }: ExamPageProps) {
   const exam = useExam();
 
   if (exam.result) {
@@ -28,11 +28,11 @@ export default function ExamPage({ onNavigate, onBack }: ExamPageProps) {
     return <ExamInProgress exam={exam} />;
   }
 
-  return <ExamSetup exam={exam} onBack={onBack} />;
+  return <ExamSetup exam={exam} />;
 }
 
 // --- Setup View ---
-function ExamSetup({ exam, onBack }: { exam: ReturnType<typeof useExam>; onBack: () => void }) {
+function ExamSetup({ exam }: { exam: ReturnType<typeof useExam> }) {
   const { domains } = useDomains();
   const [questionCount, setQuestionCount] = useState(25);
   const [timeLimit, setTimeLimit] = useState(30);
@@ -51,13 +51,6 @@ function ExamSetup({ exam, onBack }: { exam: ReturnType<typeof useExam>; onBack:
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)] border border-slate-200/60 dark:border-slate-800/60 p-8">
         <div className="flex items-center gap-4 mb-8 pb-6 border-b border-slate-100 dark:border-slate-800/50">
-          <button
-            onClick={onBack}
-            className="p-2 -ml-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors active:scale-95"
-            aria-label="Go back"
-          >
-            <ArrowLeft className="w-6 h-6 text-slate-700 dark:text-slate-300" />
-          </button>
           <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-2xl">
             <Timer className="w-8 h-8 text-blue-600 dark:text-blue-500" />
           </div>
