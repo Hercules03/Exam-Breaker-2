@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { CheckCircle, XCircle, Loader, ChevronDown, ChevronUp, Lightbulb, Key, Bookmark, RotateCcw, ArrowRight } from 'lucide-react';
+import { CheckCircle, XCircle, Loader, ChevronDown, ChevronUp, Lightbulb, Key, Bookmark, RotateCcw, ArrowRight, Timer as TimerIcon } from 'lucide-react';
 import { useQuestion } from '../hooks/useQuestions';
 import { useSubmitAnswer, useAnswerHistory } from '../hooks/useAnswers';
 import { useBookmark } from '../hooks/useBookmarks';
@@ -81,6 +81,12 @@ interface QuestionDetailPageProps {
   selectedDomain?: string;
 }
 
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 export default function QuestionDetailPage({
   questionId,
   onBack,
@@ -100,8 +106,16 @@ export default function QuestionDetailPage({
   const [showSimplified, setShowSimplified] = useState(false);
   const [showKeywords, setShowKeywords] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [secondsSpent, setSecondsSpent] = useState(0);
+  const [totalQuestions, setTotalQuestions] = useState<number | null>(null);
+  const [currentIndex, setCurrentIndex] = useState<number | null>(null);
   const prevQuestionIdRef = useRef(questionId);
   const isNavigatingRef = useRef(false);
+  
+  // Swipe detection states
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const minSwipeDistance = 50;
 
   const resetQuestionState = useCallback(() => {
     setSelectedAnswer(null);
@@ -112,7 +126,33 @@ export default function QuestionDetailPage({
     setShowSimplified(false);
     setShowKeywords(false);
     setShowHistory(false);
+    setSecondsSpent(0);
   }, []);
+
+  // Fetch session progress
+  useEffect(() => {
+    const fetchProgress = async () => {
+      try {
+        const allQuestions = await QuestionService.getFilteredQuestions(selectedDomain);
+        setTotalQuestions(allQuestions.length);
+        const idx = allQuestions.findIndex(q => q.id === questionId);
+        if (idx !== -1) setCurrentIndex(idx + 1);
+      } catch (err) {
+        console.error('Failed to fetch progress:', err);
+      }
+    };
+    fetchProgress();
+  }, [questionId, selectedDomain]);
+
+  // Timer effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!showExplanation) {
+        setSecondsSpent(s => s + 1);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [showExplanation, questionId]);
 
   // Reset states when question ID changes
   useEffect(() => {
@@ -159,6 +199,46 @@ export default function QuestionDetailPage({
     }
   }, [navigationMode, selectedDomain, question, onNavigate]);
 
+  const handlePreviousQuestion = useCallback(async () => {
+    if (navigationMode === 'direct') {
+      try {
+        const allQuestions = await QuestionService.getFilteredQuestions(selectedDomain);
+        const currentIndex = allQuestions.findIndex(q => q.id === questionId);
+        if (currentIndex > 0) {
+          const prevQuestion = allQuestions[currentIndex - 1];
+          onNavigate('detail', prevQuestion.id, selectedDomain, 'direct');
+        }
+      } catch (err) {
+        console.error('Failed to navigate to previous question:', err);
+      }
+    } else {
+      onBack();
+    }
+  }, [navigationMode, selectedDomain, questionId, onNavigate, onBack]);
+
+  // Swipe handlers
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe && showExplanation) {
+      handleNextQuestion();
+    } else if (isRightSwipe) {
+      handlePreviousQuestion();
+    }
+  };
+
   const handleAnswerSubmit = useCallback(async () => {
     if (!selectedAnswer) return;
     try {
@@ -166,6 +246,12 @@ export default function QuestionDetailPage({
       setSubmitResult(result);
       await refreshHistory();
       setShowExplanation(true);
+      
+      // Intelligent Auto-Expansion: If incorrect, show explanations automatically
+      if (!result.isCorrect) {
+        setShowWhyCorrect(true);
+        setShowWhyIncorrect(true);
+      }
     } catch (err) {
       console.error('Failed to submit answer:', err);
     }
@@ -237,7 +323,28 @@ export default function QuestionDetailPage({
     : question.domain;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-24">
+    <div 
+      className="max-w-3xl mx-auto space-y-6 pb-24"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* Session Progress Tracker */}
+      {currentIndex && totalQuestions && (
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Progress</span>
+            <span className="text-xs font-black text-slate-900 dark:text-slate-100">{currentIndex} / {totalQuestions}</span>
+          </div>
+          <div className="w-32 bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+            <div 
+              className="bg-blue-600 h-full transition-all duration-500" 
+              style={{ width: `${(currentIndex / totalQuestions) * 100}%` }} 
+            />
+          </div>
+        </div>
+      )}
+
       {/* Question Card */}
       <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)] border border-slate-200/60 dark:border-slate-800/60 p-6 md:p-8">
         <div className="flex items-center gap-3 mb-6 flex-wrap">
@@ -247,11 +354,12 @@ export default function QuestionDetailPage({
           <span className="px-3 py-1.5 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 text-xs font-semibold rounded-lg tracking-wide uppercase">
             {domainLabel}
           </span>
-          {history.length > 0 && (
-            <span className="text-sm font-medium text-slate-500 dark:text-slate-400 ml-2">
-              Attempt: {history.length}
-            </span>
-          )}
+          
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 rounded-lg text-xs font-bold text-slate-500 dark:text-slate-400">
+            <TimerIcon className="w-3.5 h-3.5" />
+            {formatTime(secondsSpent)}
+          </div>
+
           <button
             onClick={toggleBookmark}
             className="ml-auto p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors active:scale-90"
@@ -261,12 +369,12 @@ export default function QuestionDetailPage({
           </button>
         </div>
 
-        <h2 className="text-xl md:text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-8 leading-relaxed">
+        <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 mb-8 leading-[1.4]">
           {question.stem}
         </h2>
 
         {/* Answer Options */}
-        <div className="space-y-3">
+        <div className="space-y-3.5">
           {options.map((option) => {
             const optionText = question[`option${option}`];
             const isSelected = selectedAnswer === option;
@@ -298,14 +406,14 @@ export default function QuestionDetailPage({
                 key={option}
                 onClick={() => !showExplanation && setSelectedAnswer(option)}
                 disabled={showExplanation || submitting}
-                className={`w-full text-left p-4 md:p-5 border-2 rounded-2xl transition-all duration-200 ${
+                className={`w-full text-left p-4 md:p-5 border-2 rounded-2xl transition-all duration-200 group ${
                   !showExplanation ? 'active:scale-[0.98]' : 'cursor-default'
                 } ${bgColor} ${borderColor} ${
-                  isSelected && !showExplanation ? 'shadow-sm' : ''
+                  isSelected && !showExplanation ? 'shadow-sm animate-pulse-subtle' : ''
                 }`}
               >
                 <div className="flex items-start gap-4">
-                  <div className={`flex-shrink-0 w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full border-2 font-bold text-sm md:text-base transition-colors ${
+                  <div className={`flex-shrink-0 w-9 h-9 md:w-11 md:h-11 flex items-center justify-center rounded-full border-2 font-bold text-base transition-colors ${
                     showExplanation
                       ? isCorrect
                         ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-100/50 dark:bg-transparent'
@@ -318,14 +426,14 @@ export default function QuestionDetailPage({
                   }`}>
                     {option}
                   </div>
-                  <div className="flex-1 pt-1.5 md:pt-2">
-                    <p className={`font-medium ${textColor}`}>{optionText}</p>
+                  <div className="flex-1 pt-1.5 md:pt-2.5">
+                    <p className={`font-semibold text-base md:text-lg leading-relaxed ${textColor}`}>{optionText}</p>
                   </div>
                   {showExplanation && isCorrect && (
-                    <CheckCircle className="w-6 h-6 text-emerald-500 flex-shrink-0 mt-1" />
+                    <CheckCircle className="w-7 h-7 text-emerald-500 flex-shrink-0 mt-2" />
                   )}
                   {showExplanation && wasAnsweredIncorrectly && (
-                    <XCircle className="w-6 h-6 text-rose-500 flex-shrink-0 mt-1" />
+                    <XCircle className="w-7 h-7 text-rose-500 flex-shrink-0 mt-2" />
                   )}
                 </div>
               </button>
@@ -343,7 +451,7 @@ export default function QuestionDetailPage({
 
       {/* Result Banner */}
       {showExplanation && (
-        <div className={`rounded-2xl shadow-sm border p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+        <div className={`rounded-2xl shadow-sm border p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in slide-in-from-bottom-2 duration-300 ${
           submitResult?.isCorrect 
             ? 'bg-emerald-50/50 dark:bg-emerald-500/10 border-emerald-200/50 dark:border-emerald-500/20' 
             : 'bg-rose-50/50 dark:bg-rose-500/10 border-rose-200/50 dark:border-rose-500/20'
@@ -379,7 +487,7 @@ export default function QuestionDetailPage({
 
       {/* Explanation Cards */}
       {showExplanation && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-in fade-in duration-500">
           {/* Why Correct */}
           {question.whyCorrect && (
             <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 overflow-hidden transition-all duration-300">
@@ -469,12 +577,6 @@ export default function QuestionDetailPage({
                   <FormattedText text={question.keywords} />
                 </div>
               )}
-            </div>
-          )}
-
-          {!question.whyCorrect && !question.whyIncorrect && (
-            <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 text-center">
-              <p className="text-slate-500 dark:text-slate-400 font-medium">No detailed explanation available for this question.</p>
             </div>
           )}
         </div>
