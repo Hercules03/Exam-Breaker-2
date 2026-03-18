@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { Loader, RotateCcw, ArrowLeft, ArrowRight, Shuffle, Layers, ChevronLeft } from 'lucide-react';
 import { FlashcardService, Flashcard } from '../services/FlashcardService';
 import { useDomains } from '../hooks/useQuestions';
-import { useScrollDirection } from '../hooks/useScrollDirection';
 import { PageType } from '../App';
 
 interface FlashcardsPageProps {
@@ -19,7 +18,6 @@ export default function FlashcardsPage({ onNavigate: _onNavigate, onBack }: Flas
   const [loading, setLoading] = useState(true);
   const [selectedDomain, setSelectedDomain] = useState<string | undefined>();
   const [started, setStarted] = useState(false);
-  const barHidden = useScrollDirection();
 
   // Load cards
   useEffect(() => {
@@ -295,7 +293,7 @@ export default function FlashcardsPage({ onNavigate: _onNavigate, onBack }: Flas
       )}
 
       {/* Navigation */}
-      <div className={`fixed left-0 right-0 z-50 px-4 pb-3 pt-2 pointer-events-none transition-all duration-300 ease-in-out ${barHidden ? 'bottom-0 translate-y-full md:bottom-0 md:translate-y-full' : 'bottom-[4.5rem] translate-y-0 md:bottom-0 md:translate-y-0'}`}>
+      <div className="fixed bottom-[4.5rem] md:bottom-0 left-0 right-0 z-50 px-4 pb-3 pt-2 pointer-events-none">
         <div className="max-w-2xl mx-auto flex gap-3 pointer-events-auto">
           <button
             onClick={handlePrev}
