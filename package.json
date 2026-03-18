@@ -3,7 +3,7 @@
   "private": true,
   "version": "2.0.0",
   "type": "module",
-  "homepage": "https://Hercules03.github.io/exam-breaker",
+  "homepage": "https://Hercules03.github.io/Exam-Breaker-2",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
