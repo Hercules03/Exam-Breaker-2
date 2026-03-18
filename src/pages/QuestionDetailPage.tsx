@@ -111,11 +111,6 @@ export default function QuestionDetailPage({
   const [currentIndex, setCurrentIndex] = useState<number | null>(null);
   const prevQuestionIdRef = useRef(questionId);
   const isNavigatingRef = useRef(false);
-  
-  // Swipe detection states
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
-  const minSwipeDistance = 50;
 
   const resetQuestionState = useCallback(() => {
     setSelectedAnswer(null);
@@ -198,46 +193,6 @@ export default function QuestionDetailPage({
       console.error('Failed to navigate to next question:', err);
     }
   }, [navigationMode, selectedDomain, question, onNavigate]);
-
-  const handlePreviousQuestion = useCallback(async () => {
-    if (navigationMode === 'direct') {
-      try {
-        const allQuestions = await QuestionService.getFilteredQuestions(selectedDomain);
-        const currentIndex = allQuestions.findIndex(q => q.id === questionId);
-        if (currentIndex > 0) {
-          const prevQuestion = allQuestions[currentIndex - 1];
-          onNavigate('detail', prevQuestion.id, selectedDomain, 'direct');
-        }
-      } catch (err) {
-        console.error('Failed to navigate to previous question:', err);
-      }
-    } else {
-      onBack();
-    }
-  }, [navigationMode, selectedDomain, questionId, onNavigate, onBack]);
-
-  // Swipe handlers
-  const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe && showExplanation) {
-      handleNextQuestion();
-    } else if (isRightSwipe) {
-      handlePreviousQuestion();
-    }
-  };
 
   const handleAnswerSubmit = useCallback(async () => {
     if (!selectedAnswer) return;
@@ -323,12 +278,7 @@ export default function QuestionDetailPage({
     : question.domain;
 
   return (
-    <div 
-      className="max-w-3xl mx-auto space-y-6 pb-24"
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-    >
+    <div className="max-w-3xl mx-auto space-y-6 pb-24">
       {/* Session Progress Tracker */}
       {currentIndex && totalQuestions && (
         <div className="flex items-center justify-between px-1">

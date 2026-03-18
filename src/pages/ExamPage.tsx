@@ -3,6 +3,7 @@ import { Timer, CheckCircle, XCircle, Loader, AlertCircle, Play, ListOrdered, Ha
 import { useExam } from '../hooks/useExam';
 import { useQuestion } from '../hooks/useQuestions';
 import { useDomains } from '../hooks/useQuestions';
+import { useScrollDirection } from '../hooks/useScrollDirection';
 import { ExamConfig } from '../types/index';
 import { PageType } from '../App';
 
@@ -167,6 +168,7 @@ function ExamInProgress({ exam }: { exam: ReturnType<typeof useExam> }) {
   const { session, currentIndex, timeRemaining } = exam;
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
+  const barHidden = useScrollDirection();
 
   if (!session || session.questionIds.length === 0) {
     return (
@@ -254,8 +256,16 @@ function ExamInProgress({ exam }: { exam: ReturnType<typeof useExam> }) {
       </div>
 
       {/* Fixed Bottom Action Bar */}
-      <div className="fixed bottom-[4.5rem] md:bottom-0 left-0 right-0 z-50 bg-white/85 dark:bg-[#0f172a]/85 backdrop-blur-lg border-t border-slate-200/60 dark:border-slate-800/60 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] safe-area-inset-bottom p-4">
-        <div className="max-w-3xl mx-auto flex gap-3">
+      <div className={`fixed left-0 right-0 z-50 px-4 pb-3 pt-2 pointer-events-none transition-all duration-300 ease-in-out ${barHidden ? 'bottom-0 translate-y-full md:bottom-0 md:translate-y-full' : 'bottom-[4.5rem] translate-y-0 md:bottom-0 md:translate-y-0'}`}>
+        <div className="max-w-3xl mx-auto mb-2 text-center pointer-events-auto">
+          <button
+             onClick={() => setShowQuitConfirm(true)}
+             className="text-sm font-medium text-slate-400 hover:text-rose-500 transition-colors"
+          >
+            End Simulation Early
+          </button>
+        </div>
+        <div className="max-w-3xl mx-auto flex gap-3 pointer-events-auto">
           <button
             onClick={() => exam.goToQuestion(Math.max(0, currentIndex - 1))}
             disabled={currentIndex === 0}
@@ -263,7 +273,7 @@ function ExamInProgress({ exam }: { exam: ReturnType<typeof useExam> }) {
           >
             Prev
           </button>
-          
+
           {currentIndex < session.questionIds.length - 1 ? (
             <button
               onClick={() => exam.goToQuestion(currentIndex + 1)}
@@ -279,14 +289,6 @@ function ExamInProgress({ exam }: { exam: ReturnType<typeof useExam> }) {
               Finish Exam
             </button>
           )}
-        </div>
-        <div className="max-w-3xl mx-auto mt-3 text-center">
-          <button
-             onClick={() => setShowQuitConfirm(true)}
-             className="text-sm font-medium text-slate-400 hover:text-rose-500 transition-colors"
-          >
-            End Simulation Early
-          </button>
         </div>
       </div>
 
