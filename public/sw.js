@@ -1,5 +1,5 @@
-const CACHE_NAME = 'exam-breaker-v1';
-const BASE_PATH = '/Exam-Breaker';
+const CACHE_NAME = 'exam-breaker-v2';
+const BASE_PATH = '/Exam-Breaker-2';
 const urlsToCache = [
   BASE_PATH + '/',
   BASE_PATH + '/index.html',

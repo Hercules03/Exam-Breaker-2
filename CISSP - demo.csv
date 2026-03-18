@@ -1,0 +1,66 @@
+No.,Question,OptionA,OptionB,OptionC,OptionD,Answer,Domain,Name of domain,Simplified,Why the answer is correct,Why others are incorrect,Key words,Full_Question
+1,"Which of the following types of access control seeks to discover evidence of unwanted, unauthorized, or illicit behavior or activity?",Preventive,Deterrent,Detective,Corrective,C,5,Identity and Access Management (IAM),"Which type of security control is designed to find and record bad things after they have happened or while they are happening?
+
+A.) Preventive: Stop it before it starts.
+
+B.) Deterrent: Scaring people so they don't try it.
+
+C.) Detective: Catching it in the act or finding proof later.
+
+D.) Corrective: Fixing the damage after it's done.","Detective controls are ""after-the-fact"" or ""during-the-fact"" mechanisms. Their primary goal is to identify and alert the organization to a security policy violation. From a managerial perspective, these are essential because no preventive control is 100% effective; detective controls provide the visibility needed to trigger incident response.","A.) Preventive: These are ""before-the-fact."" They aim to physically or logically block an action (e.g., a firewall or a locked door). They don't ""discover evidence""; they stop the event from occurring in the first place.
+
+B.) Deterrent: These aim to discourage a person from even attempting a violation (e.g., a ""Beware of Dog"" sign). It influences the adversary's mind rather than discovering their activity.
+
+C.) Corrective: These are ""remediation"" controls. They focus on restoring the system to a functional state after a problem is found (e.g., rebooting a system or restoring from backup). They follow the detective phase.","Access Control: A collection of mechanisms that work together to create a security architecture.
+
+Discover: The key qualifier in this question. In CISSP-speak, ""discover,"" ""identify,"" or ""alert"" almost always points toward Detective controls.
+
+Illicit Behavior: Any activity that violates the established security policy.","Which of the following types of access control seeks to discover evidence of unwanted, unauthorized, or illicit behavior or activity?
+A.) Preventive
+B.) Deterrent
+C.) Detective
+D.) Corrective"
+2,Define and detail the aspects of password selection that distinguish good password choices from ultimately poor password choices.,Is difficult to guess or unpredictable,Meets minimum length requirements,Meets specific complexity requirements,All of the above,D,5,Identity and Access Management (IAM),"What makes a password strong instead of weak?
+
+A.) Unpredictable: Hard for humans or machines to guess.
+
+B.) Long: Has enough characters to resist brute-force attacks.
+
+C.) Complex: Uses different types of characters (numbers, symbols, etc.).
+
+D.) All of the above: It needs to be all these things to be truly secure.","In the CISSP mindset, security is about Defense in Depth. A password that is long (Length) but easy to guess (Predictability), like ""aaaaaaaaaaaa,"" is weak. A password that is complex but short (Complexity), like ""A!1"", is weak. To mitigate the risk of modern cracking techniques like dictionary attacks and rainbow tables, a password must satisfy all three dimensions: it must be long enough to increase the work factor, complex enough to expand the keyspace, and random enough to prevent social engineering.","A, B, and C: While each of these is a valid ""aspect"" of a good password, they are incomplete on their own. The CISSP exam often uses ""All of the above"" or ""MOST"" to test your ability to see the holistic security posture rather than focusing on a single technical control. Choosing just one would leave a significant vulnerability open.","Entropy: A measure of randomness. High entropy makes a password unpredictable.
+
+Keyspace: The total number of possible combinations. Increased by length and complexity.
+
+Brute-Force Attack: An automated attack that tries every possible combination.
+
+Dictionary Attack: An attack that tries common words and variations. This is why ""predictability"" matters.","Define and detail the aspects of password selection that distinguish good password choices from ultimately poor password choices.
+A.) Is difficult to guess or unpredictable
+B.) Meets minimum length requirements
+C.) Meets specific complexity requirements
+D.) All of the above"
+3,"Some adversaries use DoS attacks as their primary weapon to harm targets, whereas others may use them as weapons of last 
+resort when all other attempts to intrude on a target fail. Which of the following is most liekly to detect DoS attacks?",Host-based IDS,Network-based IDS,Vulnerability scanner,Penetration testing,B,7,Security Operations,"Which tool is best at spotting a Denial of Service (DoS) attack while it's happening?
+
+A.) Host-based IDS: A sensor on a single computer looking for weird local activity.
+
+B.) Network-based IDS: A sensor watching all traffic moving across the wire.
+
+C.) Vulnerability scanner: A tool that looks for holes in your software.
+
+D.) Penetration testing: A human-led exercise to break into your systems.","A Network-based IDS (NIDS) is the ""best"" answer because a DoS attack is almost always a network-layer event. To ""detect"" a DoS, you need to see the massive volume of traffic or the malformed packets arriving at the network boundary before they overwhelm the individual hosts. A NIDS sits at strategic points (like behind a firewall) to monitor traffic patterns across the entire segment, making it the most effective tool for real-time detection of flooding or protocol-based attacks.","A.) Host-based IDS (HIDS): While a HIDS can detect high CPU usage or logs on a specific server, it has a narrow ""soda-straw"" view. It cannot see the network-wide traffic patterns, and by the time the HIDS alerts you, the server is likely already crashing and unable to send the alert.
+
+B.) Vulnerability scanner: This is a proactive/detective tool used to find weaknesses before an attack. It does not monitor live traffic and would not ""detect"" an ongoing DoS attack in progress.
+
+C.) Penetration testing: This is a proactive assessment. While a pentester might perform a DoS (rarely, due to business impact), the test itself is not a detection mechanism.","Detection: The act of identifying an event as it occurs (Real-time).
+
+NIDS: Sensors that analyze network packets for signatures or anomalies.
+
+DoS (Denial of Service): An attack aimed at exhausting resources (bandwidth, CPU, or memory) to make a service unavailable.
+
+HIDS: Monitors internals of a specific operating system (system calls, file integrity).","Some adversaries use DoS attacks as their primary weapon to harm targets, whereas others may use them as weapons of last 
+resort when all other attempts to intrude on a target fail. Which of the following is most liekly to detect DoS attacks?
+A.) Host-based IDS
+B.) Network-based IDS
+C.) Vulnerability scanner
+D.) Penetration testing"

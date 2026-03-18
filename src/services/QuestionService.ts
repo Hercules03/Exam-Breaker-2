@@ -1,6 +1,7 @@
 import { Question, AnswerStatus } from '../types/index';
 import { db } from '../db/database';
 import { AnswerService } from './AnswerService';
+import { SpacedRepetitionService } from './SpacedRepetitionService';
 
 export class QuestionService {
   /**
@@ -24,6 +25,14 @@ export class QuestionService {
     const questions = await this.getAllQuestions();
     const domains = new Set(questions.map((q) => q.domain));
     return Array.from(domains).sort();
+  }
+
+  /**
+   * Get the domain name for a domain identifier (e.g. "5" -> "Identity and Access Management (IAM)")
+   */
+  static async getDomainName(domain: string): Promise<string> {
+    const question = await db.questions.where('domain').equals(domain).first();
+    return question?.domainName || '';
   }
 
   /**
@@ -54,7 +63,7 @@ export class QuestionService {
   }
 
   /**
-   * Get a random question from filtered set
+   * Get a random question from filtered set, using spaced repetition weighting
    */
   static async getRandomQuestion(
     domain?: string,
@@ -63,8 +72,7 @@ export class QuestionService {
     const questions = await this.getFilteredQuestions(domain, answerStatus);
     if (questions.length === 0) return undefined;
 
-    const randomIndex = Math.floor(Math.random() * questions.length);
-    return questions[randomIndex];
+    return SpacedRepetitionService.getWeightedRandomQuestion(questions);
   }
 
   /**

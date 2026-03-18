@@ -1,104 +1,76 @@
-import { useState, useEffect, useRef } from 'react';
-import { CheckCircle, XCircle, Loader, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { CheckCircle, XCircle, Loader, ChevronDown, ChevronUp, Lightbulb, Key, Bookmark, RotateCcw, ArrowRight } from 'lucide-react';
 import { useQuestion } from '../hooks/useQuestions';
 import { useSubmitAnswer, useAnswerHistory } from '../hooks/useAnswers';
+import { useBookmark } from '../hooks/useBookmarks';
 import { PageType, NavigationMode } from '../App';
 import { QuestionService } from '../services/QuestionService';
-
-interface ExplanationSection {
-  emoji: string;
-  title: string;
-  type: 'correct' | 'incorrect';
-  content: string;
-}
+import { AnswerService } from '../services/AnswerService';
 
 /**
- * Parse explanation into separate sections based on emoji markers
- * Falls back to showing entire explanation if no emoji patterns found
+ * Render multi-line text with bullet point formatting
  */
-function parseExplanationSections(explanation: string): ExplanationSection[] {
-  const sections: ExplanationSection[] = [];
-  const lines = explanation.split('\n');
+function FormattedText({ text }: { text: string }) {
+  if (!text) return null;
 
-  let currentSection: Partial<ExplanationSection> | null = null;
-  let contentLines: string[] = [];
-  let foundAnyPatterns = false;
+  return (
+    <div className="space-y-2">
+      {text.split('\n').map((line, idx) => {
+        const trimmed = line.trim();
 
-  for (const line of lines) {
-    const trimmed = line.trim();
+        if (!trimmed) {
+          return <div key={idx} className="h-1" />;
+        }
 
-    // Check for section headers with emoji
-    const correctMatch = trimmed.match(/^✅\s+(.+)/);
-    const incorrectMatch = trimmed.match(/^❌\s+(.+)/);
+        if (trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.startsWith('*')) {
+          const content = trimmed.replace(/^[•\-*]\s*/, '');
+          return (
+            <div key={idx} className="ml-4 flex gap-3">
+              <span className="text-slate-400 flex-shrink-0">•</span>
+              <span>{content}</span>
+            </div>
+          );
+        }
 
-    if (correctMatch) {
-      foundAnyPatterns = true;
-      // Save previous section
-      if (currentSection) {
-        sections.push({
-          emoji: currentSection.emoji || '✅',
-          title: currentSection.title || 'Section',
-          type: currentSection.type || 'correct',
-          content: contentLines.join('\n').trim(),
-        });
-      }
+        if (line.startsWith('\t') && (trimmed.startsWith('•') || trimmed.startsWith('-'))) {
+          const content = trimmed.replace(/^[•\-]\s*/, '');
+          return (
+            <div key={idx} className="ml-6 flex gap-3">
+              <span className="text-slate-400 flex-shrink-0">•</span>
+              <span>{content}</span>
+            </div>
+          );
+        }
 
-      // Start new section
-      currentSection = {
-        emoji: '✅',
-        title: correctMatch[1],
-        type: 'correct',
-      };
-      contentLines = [];
-    } else if (incorrectMatch) {
-      foundAnyPatterns = true;
-      // Save previous section
-      if (currentSection) {
-        sections.push({
-          emoji: currentSection.emoji || '❌',
-          title: currentSection.title || 'Section',
-          type: currentSection.type || 'incorrect',
-          content: contentLines.join('\n').trim(),
-        });
-      }
+        if (trimmed.startsWith('➡')) {
+          return (
+            <p key={idx} className="text-slate-700 dark:text-slate-300 font-medium mt-2">
+              {trimmed}
+            </p>
+          );
+        }
 
-      // Start new section
-      currentSection = {
-        emoji: '❌',
-        title: incorrectMatch[1],
-        type: 'incorrect',
-      };
-      contentLines = [];
-    } else if (currentSection) {
-      // Add to current section content
-      contentLines.push(line);
-    } else {
-      // No pattern found yet, collect all lines
-      contentLines.push(line);
-    }
-  }
+        if (trimmed === '⸻' || trimmed === '---') {
+          return <hr key={idx} className="border-slate-200 dark:border-slate-700/50 my-3" />;
+        }
 
-  // Add last section
-  if (currentSection) {
-    sections.push({
-      emoji: currentSection.emoji || '❌',
-      title: currentSection.title || 'Section',
-      type: currentSection.type || 'incorrect',
-      content: contentLines.join('\n').trim(),
-    });
-  }
+        const optionHeaderMatch = trimmed.match(/^([A-D])[.)]+\s+(.*)/);
+        if (optionHeaderMatch) {
+          return (
+            <p key={idx} className="font-semibold text-slate-900 dark:text-slate-100 mt-4">
+              {trimmed}
+            </p>
+          );
+        }
 
-  // If no emoji patterns were found but there is content, show as single section
-  if (!foundAnyPatterns && contentLines.length > 0) {
-    sections.push({
-      emoji: '✅',
-      title: 'Explanation',
-      type: 'correct',
-      content: contentLines.join('\n').trim(),
-    });
-  }
-
-  return sections;
+        return (
+          <p key={idx} className="text-slate-800 dark:text-slate-200">
+            {trimmed}
+          </p>
+        );
+      })}
+    </div>
+  );
 }
 
 interface QuestionDetailPageProps {
@@ -119,41 +91,44 @@ export default function QuestionDetailPage({
   const { question, loading: questionLoading } = useQuestion(questionId);
   const { submitAnswer, submitting, error: submitError } = useSubmitAnswer();
   const { history, refresh: refreshHistory } = useAnswerHistory(questionId);
+  const { isBookmarked, toggle: toggleBookmark } = useBookmark(questionId);
   const [selectedAnswer, setSelectedAnswer] = useState<'A' | 'B' | 'C' | 'D' | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ isCorrect: boolean } | null>(null);
-  const [showCorrectExplanation, setShowCorrectExplanation] = useState(false);
-  const [showIncorrectExplanation, setShowIncorrectExplanation] = useState(false);
+  const [showWhyCorrect, setShowWhyCorrect] = useState(false);
+  const [showWhyIncorrect, setShowWhyIncorrect] = useState(false);
+  const [showSimplified, setShowSimplified] = useState(false);
+  const [showKeywords, setShowKeywords] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const prevQuestionIdRef = useRef(questionId);
   const isNavigatingRef = useRef(false);
+
+  const resetQuestionState = useCallback(() => {
+    setSelectedAnswer(null);
+    setShowExplanation(false);
+    setSubmitResult(null);
+    setShowWhyCorrect(false);
+    setShowWhyIncorrect(false);
+    setShowSimplified(false);
+    setShowKeywords(false);
+    setShowHistory(false);
+  }, []);
 
   // Reset states when question ID changes
   useEffect(() => {
     const isNewQuestion = prevQuestionIdRef.current !== questionId;
     prevQuestionIdRef.current = questionId;
+    if (isNewQuestion) resetQuestionState();
+  }, [questionId, resetQuestionState]);
 
-    if (isNewQuestion) {
-      // Reset UI state for new question
-      setSelectedAnswer(null);
-      setShowExplanation(false);
-      setSubmitResult(null);
-      setShowCorrectExplanation(false);
-      setShowIncorrectExplanation(false);
-      setShowHistory(false);
-    }
-  }, [questionId]);
-
-  // If question was already answered, show explanation automatically (but not when navigating via next)
+  // If question was already answered, show explanation automatically
   useEffect(() => {
     if (isNavigatingRef.current) {
-      // Skip auto-show when navigating via next button
       isNavigatingRef.current = false;
       return;
     }
 
     if (history.length > 0 && question && selectedAnswer === null) {
-      // Only auto-show if we haven't already set an answer in this session
       const lastAnswer = history[history.length - 1];
       setSelectedAnswer(lastAnswer.selectedAnswer as 'A' | 'B' | 'C' | 'D');
       setSubmitResult({ isCorrect: lastAnswer.isCorrect });
@@ -161,21 +136,18 @@ export default function QuestionDetailPage({
     }
   }, [history, question]);
 
-  const handleNextQuestion = async () => {
+  const handleNextQuestion = useCallback(async () => {
     try {
       isNavigatingRef.current = true;
       if (navigationMode === 'random') {
-        // Get next random unanswered question
-        const nextQuestion = await QuestionService.getRandomQuestion(undefined, 'unanswered');
+        const nextQuestion = await QuestionService.getRandomQuestion(selectedDomain, 'unanswered');
         if (nextQuestion) {
           onNavigate('detail', nextQuestion.id, selectedDomain, 'random');
         }
       } else {
-        // Get next question in sequence
         if (question) {
           const allQuestions = await QuestionService.getFilteredQuestions(selectedDomain);
           const currentIndex = allQuestions.findIndex(q => q.id === question.id);
-
           if (currentIndex !== -1 && currentIndex < allQuestions.length - 1) {
             const nextQuestion = allQuestions[currentIndex + 1];
             onNavigate('detail', nextQuestion.id, selectedDomain, 'direct');
@@ -185,33 +157,10 @@ export default function QuestionDetailPage({
     } catch (err) {
       console.error('Failed to navigate to next question:', err);
     }
-  };
+  }, [navigationMode, selectedDomain, question, onNavigate]);
 
-  if (questionLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader className="w-8 h-8 animate-spin text-blue-600" />
-      </div>
-    );
-  }
-
-  if (!question) {
-    return (
-      <div className="bg-white rounded-lg shadow p-8 text-center">
-        <p className="text-gray-600 mb-4">Question not found.</p>
-        <button
-          onClick={onBack}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-        >
-          Go Back
-        </button>
-      </div>
-    );
-  }
-
-  const handleAnswerSubmit = async () => {
+  const handleAnswerSubmit = useCallback(async () => {
     if (!selectedAnswer) return;
-
     try {
       const result = await submitAnswer(questionId, selectedAnswer);
       setSubmitResult(result);
@@ -220,32 +169,104 @@ export default function QuestionDetailPage({
     } catch (err) {
       console.error('Failed to submit answer:', err);
     }
+  }, [selectedAnswer, questionId, submitAnswer, refreshHistory]);
+
+  const handleReattempt = async () => {
+    await AnswerService.clearAnswersForQuestion(questionId);
+    await refreshHistory();
+    resetQuestionState();
   };
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      const key = e.key.toUpperCase();
+
+      if (!showExplanation && !submitting) {
+        if (['A', 'B', 'C', 'D'].includes(key)) {
+          setSelectedAnswer(key as 'A' | 'B' | 'C' | 'D');
+          return;
+        }
+      }
+
+      if (e.key === 'Enter') {
+        if (showExplanation) {
+          handleNextQuestion();
+        } else if (selectedAnswer) {
+          handleAnswerSubmit();
+        }
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        onBack();
+      }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [showExplanation, submitting, selectedAnswer, handleNextQuestion, handleAnswerSubmit, onBack]);
+
+  if (questionLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader className="w-10 h-10 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (!question) {
+    return (
+      <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-8 text-center max-w-lg mx-auto">
+        <p className="text-slate-600 dark:text-slate-400 mb-6">Question not found.</p>
+        <button
+          onClick={onBack}
+          className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors active:scale-95"
+        >
+          Go Back
+        </button>
+      </div>
+    );
+  }
+
   const options = ['A', 'B', 'C', 'D'] as const;
+  const domainLabel = question.domainName
+    ? `${question.domain} - ${question.domainName}`
+    : question.domain;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Question */}
-      <div className="bg-white rounded-lg shadow p-8">
-        <div className="flex items-center gap-3 mb-4">
-          <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm font-medium rounded">
-            Question #{question.id}
+    <div className="max-w-3xl mx-auto space-y-6 pb-24">
+      {/* Question Card */}
+      <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)] border border-slate-200/60 dark:border-slate-800/60 p-6 md:p-8">
+        <div className="flex items-center gap-3 mb-6 flex-wrap">
+          <span className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg tracking-wide uppercase">
+            Q #{question.id}
           </span>
-          <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded">
-            {question.domain}
+          <span className="px-3 py-1.5 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 text-xs font-semibold rounded-lg tracking-wide uppercase">
+            {domainLabel}
           </span>
           {history.length > 0 && (
-            <span className="text-sm text-gray-600">
+            <span className="text-sm font-medium text-slate-500 dark:text-slate-400 ml-2">
               Attempt: {history.length}
             </span>
           )}
+          <button
+            onClick={toggleBookmark}
+            className="ml-auto p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors active:scale-90"
+            aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+          >
+            <Bookmark className={`w-5 h-5 transition-colors ${isBookmarked ? 'text-yellow-500 fill-yellow-500' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`} />
+          </button>
         </div>
 
-        <h2 className="text-2xl font-bold text-gray-900 mb-8">{question.stem}</h2>
+        <h2 className="text-xl md:text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-8 leading-relaxed">
+          {question.stem}
+        </h2>
 
         {/* Answer Options */}
-        <div className="space-y-3 mb-8">
+        <div className="space-y-3">
           {options.map((option) => {
             const optionText = question[`option${option}`];
             const isSelected = selectedAnswer === option;
@@ -253,17 +274,23 @@ export default function QuestionDetailPage({
             const wasAnsweredIncorrectly =
               submitResult && !submitResult.isCorrect && isSelected;
 
-            let bgColor = 'bg-white hover:bg-gray-50';
-            let borderColor = 'border-gray-200';
+            let bgColor = 'bg-white dark:bg-[#1e293b] hover:bg-slate-50 dark:hover:bg-slate-800/50';
+            let borderColor = 'border-slate-200 dark:border-slate-700/80';
+            let textColor = 'text-slate-900 dark:text-slate-100';
 
             if (showExplanation) {
               if (isCorrect) {
-                bgColor = 'bg-green-50';
-                borderColor = 'border-correct';
+                bgColor = 'bg-emerald-50/50 dark:bg-emerald-500/10';
+                borderColor = 'border-emerald-500/50 dark:border-emerald-500/30';
+                textColor = 'text-emerald-900 dark:text-emerald-100';
               } else if (wasAnsweredIncorrectly) {
-                bgColor = 'bg-red-50';
-                borderColor = 'border-incorrect';
+                bgColor = 'bg-rose-50/50 dark:bg-rose-500/10';
+                borderColor = 'border-rose-500/50 dark:border-rose-500/30';
+                textColor = 'text-rose-900 dark:text-rose-100';
               }
+            } else if (isSelected) {
+              bgColor = 'bg-blue-50/50 dark:bg-blue-500/10';
+              borderColor = 'border-blue-500';
             }
 
             return (
@@ -271,22 +298,34 @@ export default function QuestionDetailPage({
                 key={option}
                 onClick={() => !showExplanation && setSelectedAnswer(option)}
                 disabled={showExplanation || submitting}
-                className={`w-full text-left p-4 border-2 rounded-lg transition ${bgColor} border-${borderColor} ${
-                  isSelected && !showExplanation ? 'border-blue-500 bg-blue-50' : ''
-                } ${showExplanation ? 'cursor-default' : 'cursor-pointer'}`}
+                className={`w-full text-left p-4 md:p-5 border-2 rounded-2xl transition-all duration-200 ${
+                  !showExplanation ? 'active:scale-[0.98]' : 'cursor-default'
+                } ${bgColor} ${borderColor} ${
+                  isSelected && !showExplanation ? 'shadow-sm' : ''
+                }`}
               >
                 <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full border-2 border-current font-semibold">
+                  <div className={`flex-shrink-0 w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full border-2 font-bold text-sm md:text-base transition-colors ${
+                    showExplanation
+                      ? isCorrect
+                        ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-100/50 dark:bg-transparent'
+                        : wasAnsweredIncorrectly
+                        ? 'border-rose-500 text-rose-600 dark:text-rose-400 bg-rose-100/50 dark:bg-transparent'
+                        : 'border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500'
+                      : isSelected
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-100/50 dark:bg-transparent'
+                      : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400'
+                  }`}>
                     {option}
                   </div>
-                  <div className="flex-1 pt-1">
-                    <p className="text-gray-900">{optionText}</p>
+                  <div className="flex-1 pt-1.5 md:pt-2">
+                    <p className={`font-medium ${textColor}`}>{optionText}</p>
                   </div>
                   {showExplanation && isCorrect && (
-                    <CheckCircle className="w-6 h-6 text-correct flex-shrink-0" />
+                    <CheckCircle className="w-6 h-6 text-emerald-500 flex-shrink-0 mt-1" />
                   )}
                   {showExplanation && wasAnsweredIncorrectly && (
-                    <XCircle className="w-6 h-6 text-incorrect flex-shrink-0" />
+                    <XCircle className="w-6 h-6 text-rose-500 flex-shrink-0 mt-1" />
                   )}
                 </div>
               </button>
@@ -294,205 +333,184 @@ export default function QuestionDetailPage({
           })}
         </div>
 
-        {/* Submit Button */}
-        {!showExplanation && (
-          <button
-            onClick={handleAnswerSubmit}
-            disabled={!selectedAnswer || submitting}
-            className="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {submitting ? 'Submitting...' : 'Submit Answer'}
-          </button>
-        )}
-
         {submitError && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          <div className="mt-6 p-4 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-xl text-rose-700 dark:text-rose-400 text-sm font-medium flex items-center gap-2">
+            <XCircle className="w-5 h-5" />
             {submitError}
           </div>
         )}
       </div>
 
-      {/* Explanation Result */}
+      {/* Result Banner */}
       {showExplanation && (
-        <div className="bg-white rounded-lg shadow p-8">
-          <div className="flex items-center gap-3 mb-2">
-            {submitResult?.isCorrect ? (
-              <>
-                <CheckCircle className="w-6 h-6 text-correct" />
-                <h3 className="text-xl font-bold text-correct">Correct!</h3>
-              </>
-            ) : (
-              <>
-                <XCircle className="w-6 h-6 text-incorrect" />
-                <h3 className="text-xl font-bold text-incorrect">Incorrect</h3>
-              </>
-            )}
+        <div className={`rounded-2xl shadow-sm border p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+          submitResult?.isCorrect 
+            ? 'bg-emerald-50/50 dark:bg-emerald-500/10 border-emerald-200/50 dark:border-emerald-500/20' 
+            : 'bg-rose-50/50 dark:bg-rose-500/10 border-rose-200/50 dark:border-rose-500/20'
+        }`}>
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              {submitResult?.isCorrect ? (
+                <>
+                  <CheckCircle className="w-7 h-7 text-emerald-600 dark:text-emerald-500" />
+                  <h3 className="text-xl font-bold text-emerald-700 dark:text-emerald-400">Correct!</h3>
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-7 h-7 text-rose-600 dark:text-rose-500" />
+                  <h3 className="text-xl font-bold text-rose-700 dark:text-rose-400">Incorrect</h3>
+                </>
+              )}
+            </div>
+            <p className="text-slate-700 dark:text-slate-300 font-medium ml-10">
+              The correct answer is <strong>{question.correctAnswer}</strong>
+            </p>
           </div>
-          <p className="text-gray-700 mb-6">
-            The correct answer is <strong>{question.correctAnswer}</strong>
-          </p>
+          
+          <button
+            onClick={handleReattempt}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors active:scale-95 shadow-sm"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Re-attempt
+          </button>
         </div>
       )}
 
       {/* Explanation Cards */}
       {showExplanation && (
         <div className="space-y-4">
-          {/* No Explanation Available */}
-          {!question.explanation && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-yellow-800">No explanation available for this question.</p>
+          {/* Why Correct */}
+          {question.whyCorrect && (
+            <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 overflow-hidden transition-all duration-300">
+              <button
+                onClick={() => setShowWhyCorrect(!showWhyCorrect)}
+                className="w-full px-6 py-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-emerald-100 dark:bg-emerald-500/20 rounded-lg">
+                    <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Why it's Correct</h3>
+                </div>
+                {showWhyCorrect ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+              </button>
+              {showWhyCorrect && (
+                <div className="px-6 pb-6 pt-2 text-slate-700 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-slate-800/50 mt-2">
+                  <FormattedText text={question.whyCorrect} />
+                </div>
+              )}
             </div>
           )}
 
-          {/* Correct Answer Explanation Card */}
-          {question.explanation && parseExplanationSections(question.explanation)
-            .filter((s) => s.type === 'correct')
-            .map((section, idx) => (
-              <div
-                key={`correct-${idx}`}
-                className="bg-white rounded-lg shadow overflow-hidden"
+          {/* Why Others Incorrect */}
+          {question.whyIncorrect && (
+            <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 overflow-hidden transition-all duration-300">
+              <button
+                onClick={() => setShowWhyIncorrect(!showWhyIncorrect)}
+                className="w-full px-6 py-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
               >
-                <button
-                  onClick={() => setShowCorrectExplanation(!showCorrectExplanation)}
-                  className="w-full px-6 py-4 flex items-center justify-between bg-green-50 border-b border-green-200 hover:bg-green-100 transition"
-                >
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-correct flex-shrink-0" />
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {section.title}
-                    </h3>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-rose-100 dark:bg-rose-500/20 rounded-lg">
+                    <XCircle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
                   </div>
-                  {showCorrectExplanation ? (
-                    <ChevronUp className="w-5 h-5 text-gray-600 flex-shrink-0" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-gray-600 flex-shrink-0" />
-                  )}
-                </button>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Why Others are Incorrect</h3>
+                </div>
+                {showWhyIncorrect ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+              </button>
+              {showWhyIncorrect && (
+                <div className="px-6 pb-6 pt-2 text-slate-700 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-slate-800/50 mt-2">
+                  <FormattedText text={question.whyIncorrect} />
+                </div>
+              )}
+            </div>
+          )}
 
-                {showCorrectExplanation && (
-                  <div className="px-6 py-4 text-gray-800 leading-relaxed space-y-3">
-                    {section.content.split('\n').map((line, lineIdx) => {
-                      // Format bullet points
-                      if (line.trim().startsWith('•')) {
-                        return (
-                          <div key={lineIdx} className="ml-4 flex gap-3">
-                            <span className="text-gray-400 flex-shrink-0">•</span>
-                            <span>{line.replace('•', '').trim()}</span>
-                          </div>
-                        );
-                      }
-
-                      // Skip empty lines but preserve spacing
-                      if (!line.trim()) {
-                        return <div key={lineIdx} className="h-1" />;
-                      }
-
-                      // Format regular lines
-                      return (
-                        <p key={lineIdx} className="text-gray-800">
-                          {line}
-                        </p>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            ))}
-
-          {/* Incorrect Options Explanation Card */}
-          {question.explanation && parseExplanationSections(question.explanation)
-            .filter((s) => s.type === 'incorrect')
-            .map((section, idx) => (
-              <div
-                key={`incorrect-${idx}`}
-                className="bg-white rounded-lg shadow overflow-hidden"
+          {/* Simplified */}
+          {question.simplified && (
+            <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 overflow-hidden transition-all duration-300">
+              <button
+                onClick={() => setShowSimplified(!showSimplified)}
+                className="w-full px-6 py-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
               >
-                <button
-                  onClick={() => setShowIncorrectExplanation(!showIncorrectExplanation)}
-                  className="w-full px-6 py-4 flex items-center justify-between bg-red-50 border-b border-red-200 hover:bg-red-100 transition"
-                >
-                  <div className="flex items-center gap-3">
-                    <XCircle className="w-5 h-5 text-incorrect flex-shrink-0" />
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {section.title}
-                    </h3>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-amber-100 dark:bg-amber-500/20 rounded-lg">
+                    <Lightbulb className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                   </div>
-                  {showIncorrectExplanation ? (
-                    <ChevronUp className="w-5 h-5 text-gray-600 flex-shrink-0" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-gray-600 flex-shrink-0" />
-                  )}
-                </button>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Simplified Explanation</h3>
+                </div>
+                {showSimplified ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+              </button>
+              {showSimplified && (
+                <div className="px-6 pb-6 pt-2 text-slate-700 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-slate-800/50 mt-2">
+                  <FormattedText text={question.simplified} />
+                </div>
+              )}
+            </div>
+          )}
 
-                {showIncorrectExplanation && (
-                  <div className="px-6 py-4 text-gray-800 leading-relaxed space-y-3">
-                    {section.content.split('\n').map((line, lineIdx) => {
-                      // Format bullet points
-                      if (line.trim().startsWith('•')) {
-                        return (
-                          <div key={lineIdx} className="ml-4 flex gap-3">
-                            <span className="text-gray-400 flex-shrink-0">•</span>
-                            <span>{line.replace('•', '').trim()}</span>
-                          </div>
-                        );
-                      }
-
-                      // Skip empty lines but preserve spacing
-                      if (!line.trim()) {
-                        return <div key={lineIdx} className="h-1" />;
-                      }
-
-                      // Format regular lines
-                      return (
-                        <p key={lineIdx} className="text-gray-800">
-                          {line}
-                        </p>
-                      );
-                    })}
+          {/* Keywords */}
+          {question.keywords && (
+            <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 overflow-hidden transition-all duration-300">
+              <button
+                onClick={() => setShowKeywords(!showKeywords)}
+                className="w-full px-6 py-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-100 dark:bg-purple-500/20 rounded-lg">
+                    <Key className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                   </div>
-                )}
-              </div>
-            ))}
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Key Words</h3>
+                </div>
+                {showKeywords ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+              </button>
+              {showKeywords && (
+                <div className="px-6 pb-6 pt-2 text-slate-700 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-slate-800/50 mt-2">
+                  <FormattedText text={question.keywords} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {!question.whyCorrect && !question.whyIncorrect && (
+            <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 text-center">
+              <p className="text-slate-500 dark:text-slate-400 font-medium">No detailed explanation available for this question.</p>
+            </div>
+          )}
         </div>
       )}
 
       {/* Answer History */}
       {history.length > 0 && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 overflow-hidden">
           <button
             onClick={() => setShowHistory(!showHistory)}
-            className="w-full px-8 py-4 flex items-center justify-between hover:bg-gray-50 transition"
+            className="w-full px-6 py-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
           >
-            <h3 className="text-lg font-semibold text-gray-900">Answer History</h3>
-            {showHistory ? (
-              <ChevronUp className="w-5 h-5 text-gray-600 flex-shrink-0" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-600 flex-shrink-0" />
-            )}
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Previous Attempts</h3>
+            {showHistory ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
           </button>
-
           {showHistory && (
-            <div className="px-8 py-4 border-t border-gray-200 space-y-3">
+            <div className="px-6 pb-6 pt-2 border-t border-slate-100 dark:border-slate-800/50 mt-2 space-y-3">
               {history.map((answer, index) => (
-                <div
-                  key={answer.id}
-                  className="p-3 rounded-lg bg-gray-50"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {answer.isCorrect ? (
-                        <CheckCircle className="w-5 h-5 text-correct" />
-                      ) : (
-                        <XCircle className="w-5 h-5 text-incorrect" />
-                      )}
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          Attempt {index + 1}: {answer.selectedAnswer}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {new Date(answer.answeredAt).toLocaleString()}
-                        </p>
+                <div key={answer.id} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
+                  <div className="flex items-center gap-4">
+                    {answer.isCorrect ? (
+                      <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                        <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                       </div>
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center flex-shrink-0">
+                        <XCircle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-medium text-slate-900 dark:text-slate-100">
+                        Attempt {index + 1}: Selected {answer.selectedAnswer}
+                      </p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                        {new Date(answer.answeredAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -502,22 +520,39 @@ export default function QuestionDetailPage({
         </div>
       )}
 
-      {/* Navigation Buttons */}
-      <div className="flex gap-3">
-        <button
-          onClick={onBack}
-          className="flex-1 py-3 bg-gray-600 text-white font-medium rounded-lg hover:bg-gray-700 transition"
-        >
-          Back to Questions
-        </button>
-        {showExplanation && (
+      {/* Keyboard Shortcuts Hint */}
+      <div className="text-center text-sm font-medium text-slate-400 dark:text-slate-500 pb-4">
+        A / B / C / D to select &bull; Enter to submit/next
+      </div>
+
+      {/* Sticky Action Footer */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/85 dark:bg-[#0f172a]/85 backdrop-blur-lg border-t border-slate-200/60 dark:border-slate-800/60 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] safe-area-inset-bottom p-4">
+        <div className="max-w-3xl mx-auto flex gap-3">
           <button
-            onClick={handleNextQuestion}
-            className="flex-1 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition"
+            onClick={onBack}
+            className="px-6 py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors active:scale-95"
           >
-            Next Question
+            Back
           </button>
-        )}
+          
+          {!showExplanation ? (
+            <button
+              onClick={handleAnswerSubmit}
+              disabled={!selectedAnswer || submitting}
+              className="flex-1 py-4 bg-blue-600 text-white font-semibold text-lg rounded-xl hover:bg-blue-700 transition-colors disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-600 disabled:cursor-not-allowed shadow-sm active:scale-[0.98] flex items-center justify-center"
+            >
+              {submitting ? 'Submitting...' : 'Submit Answer'}
+            </button>
+          ) : (
+            <button
+              onClick={handleNextQuestion}
+              className="flex-1 py-4 bg-blue-600 text-white font-semibold text-lg rounded-xl hover:bg-blue-700 transition-colors shadow-sm active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              Next Question
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

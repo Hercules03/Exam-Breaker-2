@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Upload, AlertCircle, CheckCircle } from 'lucide-react';
-import { useImportCSV } from '../hooks/useImport';
+import { Download, Upload as UploadIcon, CheckCircle, AlertCircle, FileText, Settings, ShieldAlert, ArrowRight } from 'lucide-react';
+import { useImportCSV as useImport } from '../hooks/useImport';
 import { PageType } from '../App';
 
 interface ImportPageProps {
@@ -8,187 +8,160 @@ interface ImportPageProps {
   onBack: () => void;
 }
 
-export default function ImportPage({
-  onNavigate,
-  onBack,
-}: ImportPageProps) {
-  const [dragActive, setDragActive] = useState(false);
-  const { importFromFile, importing, error, parseErrors, result, reset } = useImportCSV();
+export default function ImportPage({ onNavigate, onBack: _onBack }: ImportPageProps) {
+  const { importFromFile, importing, error, result, reset } = useImport();
+  const [file, setFile] = useState<File | null>(null);
 
-  const handleDrag = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+      reset();
     }
   };
 
-  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-
-    const files = e.dataTransfer.files;
-    if (files && files[0]) {
-      await handleFile(files[0]);
-    }
-  };
-
-  const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files[0]) {
-      await handleFile(files[0]);
-    }
-  };
-
-  const handleFile = async (file: File) => {
-    // Validate file type
-    if (!file.name.endsWith('.csv')) {
-      throw new Error('Please select a CSV file');
-    }
-
+  const handleImport = async () => {
+    if (!file) return;
     await importFromFile(file);
+    setFile(null);
+  };
+
+  const handleDownloadDemo = () => {
+    // Assuming the demo CSV is in the public directory or accessible via this path
+    const link = document.createElement('a');
+    link.href = '/demo.csv';
+    link.download = 'demo.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Upload Area */}
-      <div className="bg-white rounded-lg shadow p-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-          <Upload className="w-7 h-7 text-blue-600" />
-          Import Questions
-        </h2>
+    <div className="max-w-2xl mx-auto space-y-6 pb-24">
+      {/* Header Card */}
+      <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)] border border-slate-200/60 dark:border-slate-800/60 p-8">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-2xl">
+            <UploadIcon className="w-8 h-8 text-blue-600 dark:text-blue-500" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Import Question Bank</h2>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">Upload a CSV file to add questions</p>
+          </div>
+        </div>
+      </div>
 
-        {!result ? (
-          <div
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-lg p-8 text-center transition ${
-              dragActive
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-300 bg-gray-50 hover:border-gray-400'
+      {/* Main Upload Card */}
+      <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-6 md:p-8">
+        <div className="space-y-6">
+          <div 
+            className={`border-2 border-dashed rounded-2xl p-10 text-center transition-all ${
+              file ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-500/10' : 'border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50'
             }`}
           >
-            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-lg font-semibold text-gray-900 mb-2">
-              Drag and drop your CSV file here
-            </p>
-            <p className="text-sm text-gray-600 mb-6">
-              or click to select a file from your computer
-            </p>
-
-            <label className="inline-block cursor-pointer">
-              <input
-                type="file"
-                accept=".csv"
-                onChange={handleChange}
-                disabled={importing}
-                className="hidden"
-              />
-              <span className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition inline-block">
-                {importing ? 'Importing...' : 'Select CSV File'}
-              </span>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+              className="hidden"
+              id="file-upload"
+            />
+            <label
+              htmlFor="file-upload"
+              className="cursor-pointer flex flex-col items-center gap-4"
+            >
+              <div className={`p-4 rounded-full ${file ? 'bg-blue-100 dark:bg-blue-500/20' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                <FileText className={`w-8 h-8 ${file ? 'text-blue-600 dark:text-blue-500' : 'text-slate-400'}`} />
+              </div>
+              <div>
+                {file ? (
+                  <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{file.name}</span>
+                ) : (
+                  <span className="text-lg font-bold text-blue-600 dark:text-blue-500 hover:text-blue-700 transition-colors">
+                    Click to select a CSV file
+                  </span>
+                )}
+                <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">
+                  Must follow the required template format
+                </p>
+              </div>
             </label>
+          </div>
 
-            <div className="mt-8 pt-8 border-t">
-              <p className="text-sm text-gray-600 mb-3 font-semibold">CSV Format Requirements:</p>
-              <ul className="text-sm text-gray-600 space-y-2 text-left max-w-sm mx-auto">
-                <li>• Column headers: id, stem, optionA, optionB, optionC, optionD, correctAnswer, explanation, domain</li>
-                <li>• Correct answer must be: A, B, C, or D</li>
-                <li>• UTF-8 encoding</li>
-                <li>• Example: <code className="bg-gray-200 px-2 py-1 rounded text-xs">1,What is 2+2?,3,4,5,6,B,The sum of 2 and 2 is 4,Math</code></li>
+          <button
+            onClick={handleImport}
+            disabled={!file || importing}
+            className="w-full py-4 bg-blue-600 text-white font-bold text-lg rounded-2xl hover:bg-blue-700 transition-all active:scale-[0.98] disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-600 disabled:cursor-not-allowed shadow-sm flex items-center justify-center gap-2"
+          >
+            {importing ? 'Importing Data...' : 'Start Import'}
+            {!importing && <ArrowRight className="w-5 h-5" />}
+          </button>
+
+          {/* Status Messages */}
+          {error && (
+            <div className="p-4 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-2xl flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-500 flex-shrink-0 mt-0.5" />
+              <div className="text-rose-700 dark:text-rose-400 text-sm font-medium">{error}</div>
+            </div>
+          )}
+
+          {result && (
+            <div className="p-6 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-2xl flex flex-col items-center text-center">
+              <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-500/20 rounded-full flex items-center justify-center mb-3">
+                <CheckCircle className="w-6 h-6 text-emerald-600 dark:text-emerald-500" />
+              </div>
+              <h3 className="text-lg font-bold text-emerald-800 dark:text-emerald-400 mb-1">Import Successful!</h3>
+              <p className="text-emerald-700 dark:text-emerald-500 text-sm mb-4">
+                Imported {result.questionsImported} questions.
+                {result.questionsSkipped > 0 && ` Skipped ${result.questionsSkipped}.`}
+              </p>
+              <button
+                onClick={() => onNavigate('list')}
+                className="px-6 py-2.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-colors active:scale-95 shadow-sm"
+              >
+                Go to Questions
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Instructions Card */}
+      <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-6 md:p-8">
+        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-6 flex items-center gap-2">
+          <Settings className="w-5 h-5 text-slate-400" />
+          Template Requirements
+        </h3>
+
+        <div className="space-y-4 text-sm text-slate-700 dark:text-slate-300">
+          <p className="leading-relaxed">
+            Your CSV file <strong className="text-slate-900 dark:text-slate-100">must</strong> contain the following headers in exact order:
+          </p>
+          
+          <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 overflow-x-auto font-mono text-xs text-slate-800 dark:text-slate-200 whitespace-nowrap">
+            Domain, DomainName, ID, Stem, Option A, Option B, Option C, Option D, Correct, Simplified, Key Words, Correct Explanation, Incorrect Explanation
+          </div>
+
+          <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200/50 dark:border-amber-500/20 rounded-xl p-4 flex items-start gap-3 mt-6">
+            <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+            <div className="text-amber-800 dark:text-amber-400 font-medium">
+              <p className="mb-2"><strong>Important Formatting Rules:</strong></p>
+              <ul className="list-disc pl-4 space-y-1 opacity-90">
+                <li>Double quotes (") inside text MUST be escaped with another double quote ("").</li>
+                <li>Fields containing commas or line breaks MUST be wrapped in double quotes.</li>
+                <li>The CSV must be encoded in UTF-8.</li>
               </ul>
             </div>
           </div>
-        ) : (
-          <div className={`rounded-lg p-6 ${
-            result && error === null ? 'bg-green-50 border-2 border-correct' : 'bg-orange-50 border-2 border-warning'
-          }`}>
-            <div className="flex items-center gap-3 mb-4">
-              {result && error === null ? (
-                <>
-                  <CheckCircle className="w-6 h-6 text-correct" />
-                  <h3 className="text-xl font-bold text-correct">Import Successful!</h3>
-                </>
-              ) : (
-                <>
-                  <AlertCircle className="w-6 h-6 text-warning" />
-                  <h3 className="text-xl font-bold text-warning">Import Completed with Errors</h3>
-                </>
-              )}
-            </div>
+        </div>
 
-            <div className="space-y-2 mb-6">
-              <p className="text-gray-800">
-                <strong>{result?.questionsImported}</strong> questions imported successfully
-              </p>
-              {result && result.questionsSkipped > 0 && (
-                <p className="text-gray-800">
-                  <strong>{result.questionsSkipped}</strong> rows skipped due to errors
-                </p>
-              )}
-            </div>
-
-            {parseErrors && parseErrors.length > 0 && (
-              <div className="mb-6">
-                <h4 className="font-semibold text-gray-900 mb-3">Errors:</h4>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {parseErrors.map((err, idx) => (
-                    <div key={idx} className="text-sm bg-white rounded p-3 border border-gray-200">
-                      {err.type === 'missingFieldId' && `Row ${err.row}: Missing ID field`}
-                      {err.type === 'missingFieldQuestion' && `Row ${err.row}: Missing question stem`}
-                      {err.type === 'missingFieldAnswer' && `Row ${err.row}: Missing answer options`}
-                      {err.type === 'missingFieldExplanation' && `Row ${err.row}: Missing explanation`}
-                      {err.type === 'missingFieldDomain' && `Row ${err.row}: Missing domain`}
-                      {err.type === 'invalidAnswerFormat' && `Row ${err.row}: Invalid answer format (expected A/B/C/D, got "${err.value}")`}
-                      {err.type === 'malformedRow' && `Row ${err.row}: Malformed row`}
-                      {err.type === 'encodingError' && `Encoding error: ${err.details}`}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  reset();
-                  onNavigate('list');
-                }}
-                className="flex-1 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition"
-              >
-                Start Practicing
-              </button>
-              <button
-                onClick={reset}
-                className="flex-1 py-3 bg-gray-600 text-white font-medium rounded-lg hover:bg-gray-700 transition"
-              >
-                Import Another File
-              </button>
-            </div>
-          </div>
-        )}
-
-        {error && (
-          <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            <p className="font-medium">Import Error</p>
-            <p className="text-sm mt-1">{error}</p>
-          </div>
-        )}
-      </div>
-
-      {!result && (
         <button
-          onClick={onBack}
-          className="w-full py-3 bg-gray-600 text-white font-medium rounded-lg hover:bg-gray-700 transition"
+          onClick={handleDownloadDemo}
+          className="mt-8 w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors active:scale-95 flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700"
         >
-          Back
+          <Download className="w-5 h-5" />
+          Download Demo Template
         </button>
-      )}
+      </div>
     </div>
   );
 }

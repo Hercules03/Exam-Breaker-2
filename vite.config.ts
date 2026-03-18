@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/Exam-Breaker/',
+  base: '/Exam-Breaker-2/',
   build: {
     outDir: 'dist',
     sourcemap: false,

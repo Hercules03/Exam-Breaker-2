@@ -2,8 +2,8 @@
   "name": "Exam Breaker - Multiple Choice Revision Companion",
   "short_name": "Exam Breaker",
   "description": "Study multiple choice questions offline. Track your progress, master any exam.",
-  "start_url": "/Exam-Breaker/",
-  "scope": "/Exam-Breaker/",
+  "start_url": "/Exam-Breaker-2/",
+  "scope": "/Exam-Breaker-2/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#2563eb",
@@ -36,7 +36,7 @@
       "name": "Pick Random Question",
       "short_name": "Random Q",
       "description": "Pick a random unanswered question",
-      "url": "/Exam-Breaker/?action=random",
+      "url": "/Exam-Breaker-2/?action=random",
       "icons": [
         {
           "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%232563eb' width='96' height='96'/><text y='72' font-size='70' font-family='Arial' text-anchor='middle' x='48'>🎲</text></svg>",
@@ -49,7 +49,7 @@
       "name": "View Progress",
       "short_name": "Progress",
       "description": "Check your progress and statistics",
-      "url": "/Exam-Breaker/?action=progress",
+      "url": "/Exam-Breaker-2/?action=progress",
       "icons": [
         {
           "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%232563eb' width='96' height='96'/><text y='72' font-size='70' font-family='Arial' text-anchor='middle' x='48'>📊</text></svg>",
@@ -62,7 +62,7 @@
       "name": "Import Questions",
       "short_name": "Import",
       "description": "Import questions from CSV",
-      "url": "/Exam-Breaker/?action=import",
+      "url": "/Exam-Breaker-2/?action=import",
       "icons": [
         {
           "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%232563eb' width='96' height='96'/><text y='72' font-size='70' font-family='Arial' text-anchor='middle' x='48'>📥</text></svg>",

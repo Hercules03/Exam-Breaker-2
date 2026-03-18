@@ -39,34 +39,6 @@ export function useImportCSV() {
     }
   }, []);
 
-  const importFromText = useCallback(async (csvContent: string, fileName: string = 'imported.csv') => {
-    try {
-      setImporting(true);
-      setError(null);
-      setParseErrors([]);
-      setResult(null);
-
-      const importResult = await ImportService.importFromText(csvContent, fileName);
-
-      if (importResult.errors.length > 0) {
-        setParseErrors(importResult.errors);
-      }
-
-      setResult({
-        questionsImported: importResult.questionsImported,
-        questionsSkipped: importResult.questionsSkipped,
-      });
-
-      return importResult;
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to import CSV';
-      setError(errorMsg);
-      throw new Error(errorMsg);
-    } finally {
-      setImporting(false);
-    }
-  }, []);
-
   const reset = useCallback(() => {
     setError(null);
     setParseErrors([]);
@@ -75,7 +47,6 @@ export function useImportCSV() {
 
   return {
     importFromFile,
-    importFromText,
     importing,
     error,
     parseErrors,

@@ -27,6 +27,7 @@ export class ProgressService {
   static async getDomainStats(domain: string): Promise<DomainStats> {
     const totalQuestions = await QuestionService.getQuestionCountByDomain(domain);
     const answers = await AnswerService.getAnswersForDomain(domain);
+    const domainName = await QuestionService.getDomainName(domain);
 
     // Count unique questions that have been answered
     const answeredQuestionIds = new Set(answers.map((a) => a.questionId));
@@ -46,6 +47,7 @@ export class ProgressService {
 
     return {
       domain,
+      domainName,
       totalQuestions,
       questionsAnswered,
       questionsCorrect,

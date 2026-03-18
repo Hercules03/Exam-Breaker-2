@@ -138,6 +138,13 @@ export class AnswerService {
   }
 
   /**
+   * Clear answers for a specific question
+   */
+  static async clearAnswersForQuestion(questionId: number): Promise<void> {
+    await db.userAnswers.where('questionId').equals(questionId).delete();
+  }
+
+  /**
    * Clear all answers
    */
   static async clearAllAnswers(): Promise<void> {

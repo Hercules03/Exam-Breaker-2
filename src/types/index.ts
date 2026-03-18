@@ -6,8 +6,13 @@ export interface Question {
   optionC: string;
   optionD: string;
   correctAnswer: 'A' | 'B' | 'C' | 'D';
-  explanation: string;
   domain: string;
+  domainName: string;
+  simplified: string;
+  whyCorrect: string;
+  whyIncorrect: string;
+  keywords: string;
+  fullQuestion: string;
   createdAt: Date;
 }
 
@@ -30,10 +35,9 @@ export interface ImportLog {
   errors: ParseError[];
 }
 
-export type ParseError = 
+export type ParseError =
   | { type: 'missingFieldQuestion'; row: number }
   | { type: 'missingFieldAnswer'; row: number }
-  | { type: 'missingFieldExplanation'; row: number }
   | { type: 'missingFieldDomain'; row: number }
   | { type: 'missingFieldId'; row: number }
   | { type: 'invalidAnswerFormat'; row: number; value: string }
@@ -42,6 +46,7 @@ export type ParseError =
 
 export interface DomainStats {
   domain: string;
+  domainName: string;
   totalQuestions: number;
   questionsAnswered: number;
   questionsCorrect: number;
@@ -61,3 +66,33 @@ export interface OverallStats {
 }
 
 export type AnswerStatus = 'unanswered' | 'answeredCorrectly' | 'answeredIncorrectly';
+
+export interface Bookmark {
+  id?: number;
+  questionId: number;
+  createdAt: Date;
+}
+
+export interface ExamConfig {
+  questionCount: number;
+  timeLimitMinutes: number;
+  domain?: string;
+}
+
+export interface ExamSession {
+  id: string;
+  config: ExamConfig;
+  questionIds: number[];
+  answers: { [questionId: number]: 'A' | 'B' | 'C' | 'D' };
+  startedAt: Date;
+  completedAt?: Date;
+}
+
+export interface ExamResult {
+  session: ExamSession;
+  score: number;
+  totalQuestions: number;
+  percentage: number;
+  domainBreakdown: { domain: string; domainName: string; correct: number; total: number }[];
+  questionResults: { questionId: number; selectedAnswer: string; correctAnswer: string; isCorrect: boolean }[];
+}
