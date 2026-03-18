@@ -293,7 +293,7 @@ export default function FlashcardsPage({ onNavigate: _onNavigate, onBack }: Flas
       )}
 
       {/* Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/85 dark:bg-[#0f172a]/85 backdrop-blur-lg border-t border-slate-200/60 dark:border-slate-800/60 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] safe-area-inset-bottom p-4">
+      <div className="fixed bottom-[4.5rem] md:bottom-0 left-0 right-0 z-50 bg-white/85 dark:bg-[#0f172a]/85 backdrop-blur-lg border-t border-slate-200/60 dark:border-slate-800/60 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] safe-area-inset-bottom p-4">
         <div className="max-w-2xl mx-auto flex gap-3">
           <button
             onClick={handlePrev}
