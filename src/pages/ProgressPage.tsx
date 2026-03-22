@@ -50,6 +50,28 @@ export default function ProgressPage({
     );
   }
 
+  if (overallStats && overallStats.totalQuestions === 0) {
+    return (
+      <div className="max-w-4xl mx-auto pb-24 flex flex-col items-center justify-center mt-12">
+        <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-10 text-center max-w-lg w-full">
+          <div className="w-20 h-20 bg-blue-50 dark:bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Target className="w-10 h-10 text-blue-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-3">No Progress Yet!</h2>
+          <p className="text-slate-500 dark:text-slate-400 mb-8 text-lg">
+            You haven't imported any questions yet. Head over to the Settings tab to get started.
+          </p>
+          <button
+            onClick={() => onNavigate('settings')}
+            className="px-8 py-3.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors active:scale-95 shadow-sm"
+          >
+            Go to Settings
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const completionPercentage = overallStats
     ? Math.round((overallStats.questionsAnswered / Math.max(overallStats.totalQuestions, 1)) * 100)
     : 0;

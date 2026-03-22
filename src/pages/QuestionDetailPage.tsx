@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { CheckCircle, XCircle, Loader, ChevronDown, ChevronUp, Lightbulb, Key, Bookmark, RotateCcw, ArrowRight, Timer as TimerIcon } from 'lucide-react';
+import { CheckCircle, XCircle, Loader, ChevronDown, ChevronUp, Lightbulb, Key, Bookmark, RotateCcw, ArrowRight, Timer as TimerIcon, Folder } from 'lucide-react';
 import { useQuestion } from '../hooks/useQuestions';
 import { useSubmitAnswer, useAnswerHistory } from '../hooks/useAnswers';
 import { useBookmark } from '../hooks/useBookmarks';
@@ -302,7 +302,8 @@ export default function QuestionDetailPage({
           <span className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg tracking-wide uppercase">
             Q #{question.id}
           </span>
-          <span className="px-3 py-1.5 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 text-xs font-semibold rounded-lg tracking-wide uppercase">
+          <span className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 text-xs font-semibold rounded-lg tracking-wide uppercase">
+            <Folder className="w-3.5 h-3.5" />
             {domainLabel}
           </span>
           
@@ -585,18 +586,11 @@ export default function QuestionDetailPage({
       {/* Sticky Action Footer */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/85 dark:bg-[#0f172a]/85 backdrop-blur-lg border-t border-slate-200/60 dark:border-slate-800/60 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] safe-area-inset-bottom p-4">
         <div className="max-w-3xl mx-auto flex gap-3">
-          <button
-            onClick={onBack}
-            className="px-6 py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors active:scale-95"
-          >
-            Back
-          </button>
-          
           {!showExplanation ? (
             <button
               onClick={handleAnswerSubmit}
               disabled={!selectedAnswer || submitting}
-              className="flex-1 py-4 bg-blue-600 text-white font-semibold text-lg rounded-xl hover:bg-blue-700 transition-colors disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-600 disabled:cursor-not-allowed shadow-sm active:scale-[0.98] flex items-center justify-center"
+              className="flex-1 py-4 bg-blue-600 text-white font-semibold text-lg rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:hover:bg-blue-600 disabled:cursor-not-allowed shadow-sm active:scale-[0.98] flex items-center justify-center"
             >
               {submitting ? 'Submitting...' : 'Submit Answer'}
             </button>

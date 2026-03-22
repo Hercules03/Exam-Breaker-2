@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { SlidersHorizontal, Loader, Search, Bookmark, Sparkles, Target, ChevronDown } from 'lucide-react';
+import { SlidersHorizontal, Loader, Search, Bookmark, Sparkles, Target, ChevronDown, Folder } from 'lucide-react';
 import { useQuestions, useDomains } from '../hooks/useQuestions';
 import { useAnswerStatus } from '../hooks/useAnswers';
 import { useOverallStats } from '../hooks/useProgress';
@@ -205,10 +205,10 @@ export default function QuestionListPage({
                   <button
                     key={domain}
                     onClick={() => handleDomainChange(domain)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
                       selectedDomain === domain
-                        ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                        : 'bg-slate-100 dark:bg-slate-800 border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                     }`}
                   >
                     {domain}
@@ -324,7 +324,8 @@ function QuestionCard({ question, isBookmarked, onSelect }: QuestionCardProps) {
           <span className="text-xs font-bold text-slate-400 tracking-wider">
             #{question.id}
           </span>
-          <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold rounded-md truncate max-w-[200px] sm:max-w-[300px]">
+          <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold rounded-md truncate max-w-[200px] sm:max-w-[300px] flex items-center gap-1.5">
+            <Folder className="w-3.5 h-3.5" />
             {question.domainName || question.domain}
           </span>
         </div>
