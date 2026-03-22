@@ -218,58 +218,37 @@ export default function FlashcardsPage({ onNavigate: _onNavigate, onBack }: Flas
 
       {/* Flip Card */}
       {card && (
-        <div className="perspective-1000">
-          <button
-            onClick={handleFlip}
-            className="w-full cursor-pointer focus:outline-none"
-            aria-label={flipped ? 'Show term' : 'Show definition'}
-          >
-            <div
-              className={`relative w-full transition-transform duration-500 transform-style-3d ${
-                flipped ? 'rotate-y-180' : ''
-              }`}
-              style={{ minHeight: '320px' }}
-            >
-              {/* Front - Term */}
-              <div
-                className={`absolute inset-0 backface-hidden rounded-3xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-8 md:p-10 flex flex-col items-center justify-center text-center transition-colors ${
-                  flipped
-                    ? 'pointer-events-none'
-                    : 'bg-white dark:bg-[#1e293b]'
-                }`}
-              >
-                <span className="px-3 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-bold uppercase tracking-wider rounded-lg mb-6">
-                  Term
-                </span>
-                <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 leading-relaxed">
-                  <LatexText>{card.term}</LatexText>
-                </h2>
-                <p className="text-sm text-slate-400 mt-6">Tap to reveal definition</p>
+        <button
+          onClick={handleFlip}
+          className="w-full cursor-pointer focus:outline-none text-left"
+          aria-label={flipped ? 'Show term' : 'Show definition'}
+        >
+          {!flipped ? (
+            <div className="rounded-3xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-8 md:p-10 flex flex-col items-center justify-center text-center bg-white dark:bg-[#1e293b] min-h-[280px]">
+              <span className="px-3 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-bold uppercase tracking-wider rounded-lg mb-6">
+                Term
+              </span>
+              <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 leading-relaxed break-words w-full">
+                <LatexText>{card.term}</LatexText>
+              </h2>
+              <p className="text-sm text-slate-400 mt-6">Tap to reveal definition</p>
+            </div>
+          ) : (
+            <div className="rounded-3xl shadow-sm border border-blue-200/60 dark:border-blue-800/40 p-8 md:p-10 flex flex-col items-center text-center bg-blue-50/50 dark:bg-blue-500/5 min-h-[280px] max-h-[60vh] overflow-y-auto">
+              <span className="px-3 py-1 bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 text-xs font-bold uppercase tracking-wider rounded-lg mb-6 flex-shrink-0">
+                Definition
+              </span>
+              <div className="text-lg md:text-xl font-medium text-slate-800 dark:text-slate-200 leading-relaxed break-words w-full">
+                <LatexText>{card.definition}</LatexText>
               </div>
-
-              {/* Back - Definition */}
-              <div
-                className={`absolute inset-0 backface-hidden rotate-y-180 rounded-3xl shadow-sm border border-blue-200/60 dark:border-blue-800/40 p-8 md:p-10 flex flex-col items-center justify-center text-center transition-colors ${
-                  flipped
-                    ? 'bg-blue-50/50 dark:bg-blue-500/5'
-                    : 'pointer-events-none'
-                }`}
-              >
-                <span className="px-3 py-1 bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 text-xs font-bold uppercase tracking-wider rounded-lg mb-6">
-                  Definition
+              <div className="mt-6 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg flex-shrink-0">
+                <span className="text-xs font-medium text-slate-500">
+                  {card.domainName || card.domain}
                 </span>
-                <p className="text-lg md:text-xl font-medium text-slate-800 dark:text-slate-200 leading-relaxed">
-                  <LatexText>{card.definition}</LatexText>
-                </p>
-                <div className="mt-6 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                  <span className="text-xs font-medium text-slate-500">
-                    {card.domainName || card.domain}
-                  </span>
-                </div>
               </div>
             </div>
-          </button>
-        </div>
+          )}
+        </button>
       )}
 
       {/* Completion Card */}
