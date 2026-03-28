@@ -19,7 +19,7 @@ export interface Question {
 export interface UserAnswer {
   id: string;
   questionId: number;
-  selectedAnswer: 'A' | 'B' | 'C' | 'D';
+  selectedAnswer: string; // Single "A" or multiple "A,B" for multi-answer questions
   isCorrect: boolean;
   answeredAt: Date;
   attemptNumber: number;
@@ -83,7 +83,7 @@ export interface ExamSession {
   id: string;
   config: ExamConfig;
   questionIds: number[];
-  answers: { [questionId: number]: 'A' | 'B' | 'C' | 'D' };
+  answers: { [questionId: number]: string }; // Single "A" or multiple "A,B"
   startedAt: Date;
   completedAt?: Date;
 }

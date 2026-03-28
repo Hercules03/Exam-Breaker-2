@@ -7,7 +7,7 @@ export function useSubmitAnswer() {
   const [error, setError] = useState<string | null>(null);
 
   const submitAnswer = useCallback(
-    async (questionId: number, selectedAnswer: 'A' | 'B' | 'C' | 'D') => {
+    async (questionId: number, selectedAnswer: string) => {
       try {
         setSubmitting(true);
         setError(null);

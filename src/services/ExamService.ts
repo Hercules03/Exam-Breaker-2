@@ -32,8 +32,10 @@ export class ExamService {
       if (!question) continue;
 
       const selectedAnswer = session.answers[questionId] || '';
-      const correctAnswers = question.correctAnswer.split(',');
-      const isCorrect = correctAnswers.includes(selectedAnswer);
+      const correctAnswers = question.correctAnswer.split(',').sort();
+      const userAnswers = selectedAnswer ? selectedAnswer.split(',').sort() : [];
+      const isCorrect = correctAnswers.length === userAnswers.length &&
+        correctAnswers.every((a, i) => a === userAnswers[i]);
 
       questionResults.push({
         questionId,

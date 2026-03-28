@@ -8,15 +8,17 @@ export class AnswerService {
    */
   static async submitAnswer(
     questionId: number,
-    selectedAnswer: 'A' | 'B' | 'C' | 'D'
+    selectedAnswer: string
   ): Promise<{ isCorrect: boolean; userAnswerId: string }> {
     const question = await QuestionService.getQuestion(questionId);
     if (!question) {
       throw new Error(`Question ${questionId} not found`);
     }
 
-    const correctAnswers = question.correctAnswer.split(',');
-    const isCorrect = correctAnswers.includes(selectedAnswer);
+    const correctAnswers = question.correctAnswer.split(',').sort();
+    const userAnswers = selectedAnswer.split(',').sort();
+    const isCorrect = correctAnswers.length === userAnswers.length &&
+      correctAnswers.every((a, i) => a === userAnswers[i]);
 
     // Get attempt number
     const previousAnswers = await this.getAnswerHistory(questionId);

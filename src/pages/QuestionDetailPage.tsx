@@ -99,7 +99,7 @@ export default function QuestionDetailPage({
   const { submitAnswer, submitting, error: submitError } = useSubmitAnswer();
   const { history, refresh: refreshHistory } = useAnswerHistory(questionId);
   const { isBookmarked, toggle: toggleBookmark } = useBookmark(questionId);
-  const [selectedAnswer, setSelectedAnswer] = useState<'A' | 'B' | 'C' | 'D' | null>(null);
+  const [selectedAnswers, setSelectedAnswers] = useState<Set<string>>(new Set());
   const [showExplanation, setShowExplanation] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ isCorrect: boolean } | null>(null);
   const [showWhyCorrect, setShowWhyCorrect] = useState(false);
@@ -113,8 +113,26 @@ export default function QuestionDetailPage({
   const prevQuestionIdRef = useRef(questionId);
   const isNavigatingRef = useRef(false);
 
+  const isMultiAnswer = question?.correctAnswer?.includes(',') ?? false;
+
+  const toggleAnswer = useCallback((option: string) => {
+    if (isMultiAnswer) {
+      setSelectedAnswers(prev => {
+        const next = new Set(prev);
+        if (next.has(option)) {
+          next.delete(option);
+        } else {
+          next.add(option);
+        }
+        return next;
+      });
+    } else {
+      setSelectedAnswers(new Set([option]));
+    }
+  }, [isMultiAnswer]);
+
   const resetQuestionState = useCallback(() => {
-    setSelectedAnswer(null);
+    setSelectedAnswers(new Set());
     setShowExplanation(false);
     setSubmitResult(null);
     setShowWhyCorrect(false);
@@ -164,9 +182,9 @@ export default function QuestionDetailPage({
       return;
     }
 
-    if (history.length > 0 && question && selectedAnswer === null) {
+    if (history.length > 0 && question && selectedAnswers.size === 0) {
       const lastAnswer = history[history.length - 1];
-      setSelectedAnswer(lastAnswer.selectedAnswer as 'A' | 'B' | 'C' | 'D');
+      setSelectedAnswers(new Set(lastAnswer.selectedAnswer.split(',')));
       setSubmitResult({ isCorrect: lastAnswer.isCorrect });
       setShowExplanation(true);
     }
@@ -196,9 +214,10 @@ export default function QuestionDetailPage({
   }, [navigationMode, selectedDomain, question, onNavigate]);
 
   const handleAnswerSubmit = useCallback(async () => {
-    if (!selectedAnswer) return;
+    if (selectedAnswers.size === 0) return;
+    const answerString = Array.from(selectedAnswers).sort().join(',');
     try {
-      const result = await submitAnswer(questionId, selectedAnswer);
+      const result = await submitAnswer(questionId, answerString);
       setSubmitResult(result);
       await refreshHistory();
       setShowExplanation(true);
@@ -211,7 +230,7 @@ export default function QuestionDetailPage({
     } catch (err) {
       console.error('Failed to submit answer:', err);
     }
-  }, [selectedAnswer, questionId, submitAnswer, refreshHistory]);
+  }, [selectedAnswers, questionId, submitAnswer, refreshHistory]);
 
   const handleReattempt = async () => {
     await AnswerService.clearAnswersForQuestion(questionId);
@@ -228,7 +247,7 @@ export default function QuestionDetailPage({
 
       if (!showExplanation && !submitting) {
         if (['A', 'B', 'C', 'D'].includes(key)) {
-          setSelectedAnswer(key as 'A' | 'B' | 'C' | 'D');
+          toggleAnswer(key);
           return;
         }
       }
@@ -236,7 +255,7 @@ export default function QuestionDetailPage({
       if (e.key === 'Enter') {
         if (showExplanation) {
           handleNextQuestion();
-        } else if (selectedAnswer) {
+        } else if (selectedAnswers.size > 0) {
           handleAnswerSubmit();
         }
         return;
@@ -249,7 +268,7 @@ export default function QuestionDetailPage({
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [showExplanation, submitting, selectedAnswer, handleNextQuestion, handleAnswerSubmit, onBack]);
+  }, [showExplanation, submitting, selectedAnswers, handleNextQuestion, handleAnswerSubmit, onBack, toggleAnswer]);
 
   if (questionLoading) {
     return (
@@ -325,11 +344,18 @@ export default function QuestionDetailPage({
           <LatexText>{question.stem}</LatexText>
         </h2>
 
+        {/* Multi-answer hint */}
+        {isMultiAnswer && !showExplanation && (
+          <div className="mb-4 px-4 py-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200/50 dark:border-amber-500/20 rounded-xl text-amber-800 dark:text-amber-400 text-sm font-medium">
+            This question has multiple correct answers. Select all that apply.
+          </div>
+        )}
+
         {/* Answer Options */}
         <div className="space-y-3.5">
           {options.map((option) => {
             const optionText = question[`option${option}`];
-            const isSelected = selectedAnswer === option;
+            const isSelected = selectedAnswers.has(option);
             const correctAnswers = question.correctAnswer.split(',');
             const isCorrect = correctAnswers.includes(option);
             const wasAnsweredIncorrectly =
@@ -357,7 +383,7 @@ export default function QuestionDetailPage({
             return (
               <button
                 key={option}
-                onClick={() => !showExplanation && setSelectedAnswer(option)}
+                onClick={() => !showExplanation && toggleAnswer(option)}
                 disabled={showExplanation || submitting}
                 className={`w-full text-left p-4 md:p-5 border-2 rounded-2xl transition-all duration-200 group ${
                   !showExplanation ? 'active:scale-[0.98]' : 'cursor-default'
@@ -580,7 +606,7 @@ export default function QuestionDetailPage({
 
       {/* Keyboard Shortcuts Hint */}
       <div className="text-center text-sm font-medium text-slate-400 dark:text-slate-500 pb-4">
-        A / B / C / D to select &bull; Enter to submit/next
+        A / B / C / D to {isMultiAnswer ? 'toggle' : 'select'} &bull; Enter to submit/next
       </div>
 
       {/* Sticky Action Footer */}
@@ -589,7 +615,7 @@ export default function QuestionDetailPage({
           {!showExplanation ? (
             <button
               onClick={handleAnswerSubmit}
-              disabled={!selectedAnswer || submitting}
+              disabled={selectedAnswers.size === 0 || submitting}
               className="flex-1 py-4 bg-blue-600 text-white font-semibold text-lg rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:hover:bg-blue-600 disabled:cursor-not-allowed shadow-sm active:scale-[0.98] flex items-center justify-center"
             >
               {submitting ? 'Submitting...' : 'Submit Answer'}

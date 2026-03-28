@@ -344,10 +344,26 @@ function ExamInProgress({ exam }: { exam: ReturnType<typeof useExam> }) {
 // --- Single Exam Question ---
 function ExamQuestion({ questionId, selectedAnswer, onSelect }: {
   questionId: number;
-  selectedAnswer?: 'A' | 'B' | 'C' | 'D';
-  onSelect: (answer: 'A' | 'B' | 'C' | 'D') => void;
+  selectedAnswer?: string;
+  onSelect: (answer: string) => void;
 }) {
   const { question, loading } = useQuestion(questionId);
+  const isMultiAnswer = question?.correctAnswer?.includes(',') ?? false;
+  const selectedSet = new Set(selectedAnswer ? selectedAnswer.split(',') : []);
+
+  const handleToggle = (option: string) => {
+    if (isMultiAnswer) {
+      const next = new Set(selectedSet);
+      if (next.has(option)) {
+        next.delete(option);
+      } else {
+        next.add(option);
+      }
+      onSelect(Array.from(next).sort().join(','));
+    } else {
+      onSelect(option);
+    }
+  };
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -355,12 +371,12 @@ function ExamQuestion({ questionId, selectedAnswer, onSelect }: {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       const key = e.key.toUpperCase();
       if (['A', 'B', 'C', 'D'].includes(key)) {
-        onSelect(key as 'A' | 'B' | 'C' | 'D');
+        handleToggle(key);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onSelect]);
+  }, [selectedAnswer, isMultiAnswer]);
 
   if (loading || !question) {
     return (
@@ -382,13 +398,18 @@ function ExamQuestion({ questionId, selectedAnswer, onSelect }: {
       <h2 className="text-xl md:text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-8 leading-relaxed">
         <LatexText>{question.stem}</LatexText>
       </h2>
+      {isMultiAnswer && (
+        <div className="mb-4 px-4 py-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200/50 dark:border-amber-500/20 rounded-xl text-amber-800 dark:text-amber-400 text-sm font-medium">
+          This question has multiple correct answers. Select all that apply.
+        </div>
+      )}
       <div className="space-y-3">
         {options.map((option) => {
-          const isSelected = selectedAnswer === option;
+          const isSelected = selectedSet.has(option);
           return (
             <button
               key={option}
-              onClick={() => onSelect(option)}
+              onClick={() => handleToggle(option)}
               className={`w-full text-left p-4 md:p-5 border-2 rounded-2xl transition-all duration-200 active:scale-[0.98] ${
                 isSelected
                   ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-500/10 shadow-sm'
@@ -397,8 +418,8 @@ function ExamQuestion({ questionId, selectedAnswer, onSelect }: {
             >
               <div className="flex items-start gap-4">
                 <div className={`flex-shrink-0 w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full border-2 font-bold text-sm md:text-base transition-colors ${
-                  isSelected 
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-100/50 dark:bg-transparent' 
+                  isSelected
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-100/50 dark:bg-transparent'
                     : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400'
                 }`}>
                   {option}

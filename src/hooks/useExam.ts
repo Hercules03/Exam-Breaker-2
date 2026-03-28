@@ -23,7 +23,7 @@ export function useExam() {
     }
   }, []);
 
-  const submitExamAnswer = useCallback((questionId: number, answer: 'A' | 'B' | 'C' | 'D') => {
+  const submitExamAnswer = useCallback((questionId: number, answer: string) => {
     setSession((prev) => {
       if (!prev) return prev;
       return {
