@@ -1,6 +1,6 @@
-# Exam Breaker - Multiple Choice Revision Companion
+# Exam Breaker 2 - Multiple Choice Revision Companion
 
-**Study multiple choice questions anywhere, anytime** with Exam Breaker—a convenient, easy-to-use mobile-first web app designed for practicing and revising your knowledge on-the-go. Perfect for revising while commuting, waiting in queues, or taking quick study breaks.
+**Study multiple choice questions anywhere, anytime** with Exam Breaker—a mobile-first web app designed for practicing and revising your knowledge on-the-go. Perfect for revising while commuting, waiting in queues, or taking quick study breaks.
 
 ---
 
@@ -10,80 +10,89 @@ Exam Breaker is a mobile-optimized web application that helps students and profe
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
-- **📥 Flexible CSV Import** - Import questions from any CSV file with your own question data. Supports two flexible formats to accommodate different CSV structures
-- **🌐 Domain Filtering** - Filter questions by specific domains/topics to focus your study on particular subjects
-- **🎲 Random Questions** - Study randomly selected questions to test your knowledge across all domains
-- **📊 Progress Analytics** - Track your mastery level by domain with detailed statistics on correct/incorrect answers and attempt counts
-- **💾 Offline Support** - Fully functional offline with IndexedDB (Dexie) local storage—study anywhere without internet
-- **📝 Detailed Explanations** - Every question includes a detailed explanation to help you understand why an answer is correct
-- **🎨 Clean, Modern UI** - Intuitive and distraction-free interface optimized for focused studying
-- **📱 Mobile-First Design** - Optimized for mobile devices with responsive layout, perfect for studying on-the-go
-- **⚡ Fast & Lightweight** - Built with modern web technologies for instant load times and smooth interactions
-- **✅ Review Tracking** - Track attempts and review counts to identify questions needing more practice
+- **Flexible CSV Import** - Import questions from a CSV file with your own question data (see format below)
+- **Domain Filtering** - Filter questions by specific domains/topics to focus your study on particular subjects
+- **Random Questions with Spaced Repetition** - Weighted random selection prioritises unanswered and incorrectly answered questions
+- **Timed Exam Mode** - Simulate real exams with configurable question count, time limit, and domain selection. Get scored results with domain breakdown
+- **Flashcards** - Study with flip-card style flashcards, filterable by domain and shuffleable
+- **Bookmarks** - Bookmark questions for quick access later
+- **Progress Analytics** - Track your mastery level by domain with detailed statistics on correct/incorrect answers and attempt counts
+- **LaTeX Support** - Questions and answers can include LaTeX math notation (rendered via KaTeX)
+- **Multi-Answer Questions** - Supports questions with multiple correct answers (e.g. "A,B,D")
+- **Backup & Restore** - Export and import your progress data (answers and bookmarks) as JSON
+- **Offline Support** - Fully functional offline with IndexedDB (Dexie) local storage—study anywhere without internet
+- **Detailed Explanations** - Every question includes explanations for why the answer is correct and why others are incorrect
+- **Mobile-First Design** - Optimised for mobile devices with responsive layout and bottom tab navigation
+- **Dark Mode** - Full dark mode support
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
-- **Frontend**: React 18.2 with TypeScript 5
-- **Build Tool**: Vite 5 (lightning-fast builds and dev server)
+- **Frontend**: React 18 with TypeScript 5
+- **Build Tool**: Vite 7
 - **Database**: Dexie 4 (IndexedDB wrapper for local storage)
 - **Styling**: Tailwind CSS 3.4 with PostCSS
-- **Icons**: Lucide React 0.344
-- **Deployment**: GitHub Pages with automated CI/CD
+- **Icons**: Lucide React
+- **LaTeX Rendering**: KaTeX (lazy-loaded)
+- **Deployment**: GitHub Pages
 - **Runtime**: ES Modules
 
 ---
 
-## 📋 CSV Import Format
+## CSV Import Format
 
-Exam Breaker supports two CSV formats for maximum flexibility:
+Exam Breaker uses a v2 CSV format with the following headers:
 
-### Standard Format (9 columns)
 ```
-id,stem,optionA,optionB,optionC,optionD,correctAnswer,explanation,domain
-1,"What is the capital of France?","London","Paris","Berlin","Madrid",B,"Paris is the capital and largest city of France.","Geography"
+No.,Question,OptionA,OptionB,OptionC,OptionD,Answer,Domain,Name of domain,Simplified,Why the answer is correct,Why others are incorrect,Key words,Full_Question
 ```
 
-### Alternative Format (5 columns)
+### Example Row
+
 ```
-#,question,answer,explanation,domain
-1,"What is the capital of France?
-A.) London
-B.) Paris
-C.) Berlin
-D.) Madrid",B,"Paris is the capital and largest city of France.","Geography"
+1,"What is the capital of France?","London","Paris","Berlin","Madrid",B,GEO,"Geography","Capital city of France","Paris is the capital and largest city of France.","London is UK, Berlin is Germany, Madrid is Spain","capital, France, Paris","What is the capital of France?"
 ```
 
-**Required Fields**:
-- `id` or `#` - Unique identifier for the question
-- `stem` or `question` - The question text
-- `optionA`, `optionB`, `optionC`, `optionD` - Answer choices (or embedded in question)
-- `correctAnswer` or `answer` - Correct answer (A, B, C, or D)
-- `explanation` - Detailed explanation for the answer
-- `domain` - Subject/topic category for filtering
+### Field Reference
+
+| Field | Required | Description |
+|---|---|---|
+| `No.` | Yes | Unique numeric identifier |
+| `Question` | Yes | The question text |
+| `OptionA` - `OptionD` | Yes | Four answer choices |
+| `Answer` | Yes | Correct answer letter(s). Single (`B`) or multiple (`A,B,D`) |
+| `Domain` | Yes | Domain/topic code for filtering |
+| `Name of domain` | No | Human-readable domain name |
+| `Simplified` | No | Simplified version of the question |
+| `Why the answer is correct` | No | Explanation for the correct answer |
+| `Why others are incorrect` | No | Explanation for why other options are wrong |
+| `Key words` | No | Keywords for the question |
+| `Full_Question` | No | Full unabridged question text |
 
 ---
 
-## 🎯 How It Works
+## How It Works
 
-1. **Import Questions** - Upload your CSV file containing multiple-choice questions. Exam Breaker validates and parses the data, providing detailed feedback on any errors.
+1. **Import Questions** - Upload your CSV file. Exam Breaker validates and parses the data, providing detailed feedback on any errors.
 
-2. **Browse & Study** - View all your questions organized by domain. Use domain filters to focus on specific topics or select random questions for comprehensive review.
+2. **Browse & Study** - View all your questions organised by domain. Use domain filters to focus on specific topics or select random questions for comprehensive review.
 
 3. **Answer & Learn** - Select your answer and immediately see if it's correct. Read the detailed explanation to understand the concept better.
 
-4. **Track Progress** - Monitor your mastery percentage by domain. See statistics on total questions, correct answers, and attempt history.
+4. **Take Exams** - Configure a timed exam with your chosen question count, time limit, and optional domain filter. Get scored results with per-domain breakdown.
 
-5. **Revise Effectively** - Use random question mode and domain filtering to target weak areas and reinforce your knowledge.
+5. **Use Flashcards** - Flip through question/answer cards to reinforce memory. Filter by domain and shuffle for variety.
+
+6. **Track Progress** - Monitor your mastery percentage by domain. See statistics on total questions, correct answers, and attempt history.
 
 All your data is stored locally in your browser—no server uploads, complete privacy.
 
 ---
 
-## 📸 UI Preview
+## UI Preview
 
 ### Question List View
 ![Question List](./screenshots/questionPage.png)
@@ -105,14 +114,14 @@ All your data is stored locally in your browser—no server uploads, complete pr
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/Hercules03/Exam-Breaker.git
-cd Exam-Breaker
+git clone https://github.com/Hercules03/Exam-Breaker-2.git
+cd Exam-Breaker-2
 
 # Install dependencies
 npm install
@@ -128,17 +137,21 @@ npm run build
 npm run preview
 ```
 
----
+### Deploy to GitHub Pages
 
-## 🌐 Live Demo
-
-**Try it now**: https://hercules03.github.io/Exam-Breaker/
-
-The app is fully functional and ready to use. Start by importing your CSV questions or try the example format to see how it works!
+```bash
+npm run deploy
+```
 
 ---
 
-## 📱 Browser Support
+## Live Demo
+
+**Try it now**: https://hercules03.github.io/Exam-Breaker-2/
+
+---
+
+## Browser Support
 
 - Chrome/Edge 90+
 - Firefox 88+
@@ -147,23 +160,6 @@ The app is fully functional and ready to use. Start by importing your CSV questi
 
 ---
 
-## 💡 Tips for Best Results
-
-1. **Organize by Domain** - Group related questions under meaningful domain names for better filtering
-2. **Write Clear Explanations** - Detailed explanations help reinforce learning
-3. **Review Weak Areas** - Use progress analytics to identify domains needing more practice
-4. **Practice Randomly** - Random question mode helps test comprehensive knowledge
-
----
-
-## 🔗 Links
-
-- **Live Demo**: https://hercules03.github.io/Exam-Breaker/
-- **Repository**: https://github.com/Hercules03/Exam-Breaker
-- **Issues & Feedback**: https://github.com/Hercules03/Exam-Breaker/issues
-
----
-
-## 📄 License
+## License
 
 This project is open source and available under the MIT License.
