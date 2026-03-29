@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { SlidersHorizontal, Loader, Search, Bookmark, Sparkles, Target, ChevronDown, Folder, Flame, BrainCircuit, Shuffle, ListChecks } from 'lucide-react';
+import { SlidersHorizontal, Loader, Search, Bookmark, Sparkles, Target, ChevronDown, Folder, Flame, BrainCircuit, ListChecks } from 'lucide-react';
 import { useQuestions, useDomains } from '../hooks/useQuestions';
 import { useAnswerStatus } from '../hooks/useAnswers';
 import { useOverallStats } from '../hooks/useProgress';
@@ -96,15 +96,6 @@ export default function QuestionListPage({
     }
   };
 
-  const handleShuffleStudy = () => {
-    if (!onStartStudySession || filteredQuestions.length === 0) return;
-    const ids = [...filteredQuestions.map((q) => q.id)];
-    for (let i = ids.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [ids[i], ids[j]] = [ids[j], ids[i]];
-    }
-    onStartStudySession({ mode: 'shuffle', questionIds: ids, domain: selectedDomain, label: 'Shuffle & Study' });
-  };
 
   const handleIncorrectDrill = async () => {
     if (!onStartStudySession) return;
@@ -197,7 +188,7 @@ export default function QuestionListPage({
         </div>
 
         {/* Quick Actions */}
-        <div className="col-span-2 grid grid-cols-2 gap-3">
+        <div className="col-span-2 grid grid-cols-3 gap-3">
           <button
             onClick={handleRandomPick}
             disabled={pickingRandom || domainsLoading || questionsLoading}
@@ -221,14 +212,6 @@ export default function QuestionListPage({
           >
             <BrainCircuit className="w-5 h-5 text-purple-600 dark:text-purple-500 mb-1.5 group-hover:scale-110 transition-transform" />
             <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">Weak Areas</span>
-          </button>
-          <button
-            onClick={handleShuffleStudy}
-            disabled={pickingRandom || domainsLoading || questionsLoading || filteredQuestions.length === 0 || !onStartStudySession}
-            className="flex flex-col items-center justify-center p-4 bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 hover:bg-amber-50 dark:hover:bg-amber-500/10 hover:border-amber-200 dark:hover:border-amber-500/30 transition-all duration-200 active:scale-95 group disabled:opacity-50"
-          >
-            <Shuffle className="w-5 h-5 text-amber-600 dark:text-amber-500 mb-1.5 group-hover:scale-110 transition-transform" />
-            <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">Shuffle & Study</span>
           </button>
         </div>
       </div>
