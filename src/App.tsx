@@ -79,7 +79,6 @@ function App() {
         return (
           <ProgressPage
             onNavigate={navigateTo}
-            onBack={goBack}
             onStartStudySession={navigateToStudySession}
           />
         );
@@ -87,7 +86,6 @@ function App() {
         return (
           <SettingsPage
             onNavigate={navigateTo}
-            onBack={goBack}
             isDark={isDark}
             toggleDark={toggleDark}
           />
@@ -96,13 +94,11 @@ function App() {
         return (
           <ExamPage
             onNavigate={navigateTo}
-            onBack={goBack}
           />
         );
       case 'flashcards':
         return (
           <FlashcardsPage
-            onNavigate={navigateTo}
             onBack={goBack}
           />
         );
@@ -121,7 +117,6 @@ function App() {
           <StudySessionPage
             config={navigationState.studySessionConfig!}
             onBack={goBack}
-            onNavigate={navigateTo}
           />
         );
       default:

@@ -9,19 +9,13 @@ import { ExamConfig } from '../types/index';
 import { PageType } from '../App';
 import LatexText from '../components/LatexText';
 import QuestionExplanation from '../components/QuestionExplanation';
+import { formatTime, safePercent } from '../utils/formatting';
 
 interface ExamPageProps {
   onNavigate: (page: PageType, questionId?: number, domain?: string) => void;
-  onBack: () => void;
 }
 
-function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-}
-
-export default function ExamPage({ onNavigate, onBack: _onBack }: ExamPageProps) {
+export default function ExamPage({ onNavigate }: ExamPageProps) {
   const exam = useExam();
 
   if (exam.result) {
@@ -546,7 +540,7 @@ function ExamResults({ exam, onNavigate }: { exam: ReturnType<typeof useExam>; o
           </h3>
           <div className="space-y-5">
             {result.domainBreakdown.map((d) => {
-              const domainPercent = d.total > 0 ? Math.round((d.correct / d.total) * 100) : 0;
+              const domainPercent = safePercent(d.correct, d.total);
               const isDomainPass = domainPercent >= 70;
               
               return (

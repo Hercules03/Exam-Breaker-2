@@ -2,15 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { Loader, RotateCcw, ArrowLeft, ArrowRight, Shuffle, Layers, ChevronLeft } from 'lucide-react';
 import { FlashcardService, Flashcard } from '../services/FlashcardService';
 import { useDomains } from '../hooks/useQuestions';
-import { PageType } from '../App';
 import LatexText from '../components/LatexText';
 
 interface FlashcardsPageProps {
-  onNavigate: (page: PageType, questionId?: number, domain?: string) => void;
   onBack: () => void;
 }
 
-export default function FlashcardsPage({ onNavigate: _onNavigate, onBack }: FlashcardsPageProps) {
+export default function FlashcardsPage({ onBack }: FlashcardsPageProps) {
   const { domains } = useDomains();
   const [allCards, setAllCards] = useState<Flashcard[]>([]);
   const [cards, setCards] = useState<Flashcard[]>([]);

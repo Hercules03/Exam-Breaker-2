@@ -5,16 +5,16 @@ import { useExamHistory } from '../hooks/useExamHistory';
 import { SavedExamResult, StudySessionConfig } from '../types/index';
 import { PageType } from '../App';
 import { QuestionService } from '../services/QuestionService';
+import { EmptyState } from '../components/EmptyState';
+import { safePercent } from '../utils/formatting';
 
 interface ProgressPageProps {
   onNavigate: (page: PageType, questionId?: number, domain?: string) => void;
-  onBack: () => void;
   onStartStudySession?: (config: StudySessionConfig) => void;
 }
 
 export default function ProgressPage({
   onNavigate,
-  onBack: _onBack,
   onStartStudySession,
 }: ProgressPageProps) {
   const { stats: overallStats, loading: overallLoading, refresh: refreshOverall } = useOverallStats();
@@ -60,28 +60,18 @@ export default function ProgressPage({
 
   if (overallStats && overallStats.totalQuestions === 0) {
     return (
-      <div className="max-w-4xl mx-auto pb-24 flex flex-col items-center justify-center mt-12">
-        <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-10 text-center max-w-lg w-full">
-          <div className="w-20 h-20 bg-blue-50 dark:bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Target className="w-10 h-10 text-blue-500" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-3">No Progress Yet!</h2>
-          <p className="text-slate-500 dark:text-slate-400 mb-8 text-lg">
-            You haven't imported any questions yet. Head over to the Settings tab to get started.
-          </p>
-          <button
-            onClick={() => onNavigate('settings')}
-            className="px-8 py-3.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors active:scale-95 shadow-sm"
-          >
-            Go to Settings
-          </button>
-        </div>
-      </div>
+      <EmptyState
+        icon={<Target className="w-8 h-8 text-blue-500" />}
+        title="No Progress Yet!"
+        description="You haven't imported any questions yet. Head over to the Settings tab to get started."
+        actionLabel="Go to Settings"
+        onAction={() => onNavigate('settings')}
+      />
     );
   }
 
   const completionPercentage = overallStats
-    ? Math.round((overallStats.questionsAnswered / Math.max(overallStats.totalQuestions, 1)) * 100)
+    ? safePercent(overallStats.questionsAnswered, overallStats.totalQuestions)
     : 0;
 
   return (
@@ -144,10 +134,7 @@ export default function ProgressPage({
                 {overallStats.questionsCorrect}
               </p>
               <p className="text-xs font-medium text-emerald-600/70 dark:text-emerald-500/70 mt-1">
-                {overallStats.questionsAnswered > 0
-                  ? Math.round((overallStats.questionsCorrect / overallStats.questionsAnswered) * 100)
-                  : 0}
-                % accuracy
+                {safePercent(overallStats.questionsCorrect, overallStats.questionsAnswered)}% accuracy
               </p>
             </div>
 
@@ -207,7 +194,7 @@ export default function ProgressPage({
                     <p className="text-xs font-medium text-slate-500">
                       {domain.questionsCorrect} of {domain.totalQuestions} correct
                       {domain.questionsAnswered > 0 && (
-                        <span className="text-slate-400 ml-1">({Math.round((domain.questionsCorrect / domain.questionsAnswered) * 100)}%)</span>
+                        <span className="text-slate-400 ml-1">({safePercent(domain.questionsCorrect, domain.questionsAnswered)}%)</span>
                       )}
                     </p>
                   </div>
@@ -315,7 +302,7 @@ export default function ProgressPage({
                   {isExpanded && exam.domainBreakdown.length > 0 && (
                     <div className="px-4 pb-4 pt-1 border-t border-slate-200 dark:border-slate-700/50 space-y-2">
                       {exam.domainBreakdown.map((d) => {
-                        const pct = d.total > 0 ? Math.round((d.correct / d.total) * 100) : 0;
+                        const pct = safePercent(d.correct, d.total);
                         return (
                           <div key={d.domain} className="flex items-center justify-between text-sm">
                             <span className="text-slate-600 dark:text-slate-400 truncate flex-1 mr-4">{d.domainName}</span>

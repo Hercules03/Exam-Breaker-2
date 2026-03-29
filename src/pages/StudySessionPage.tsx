@@ -1,36 +1,35 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, Loader, ArrowRight, ArrowLeft, RotateCcw, Trophy, Folder } from 'lucide-react';
+import { CheckCircle, XCircle, Loader, RotateCcw, Trophy, Folder } from 'lucide-react';
 import { useStudySession } from '../hooks/useStudySession';
 import { useQuestion } from '../hooks/useQuestions';
 import { useSubmitAnswer } from '../hooks/useAnswers';
+import { useBookmark } from '../hooks/useBookmarks';
 import { StudySessionConfig } from '../types/index';
-import { PageType, NavigationMode } from '../App';
 import LatexText from '../components/LatexText';
 import FormattedText from '../components/FormattedText';
+import { OptionCard } from '../components/OptionCard';
+import { MobileActionBar } from '../components/MobileActionBar';
+import { ResultBanner } from '../components/ResultBanner';
+import { EmptyState } from '../components/EmptyState';
+import { safePercent } from '../utils/formatting';
 
 interface StudySessionPageProps {
   config: StudySessionConfig;
   onBack: () => void;
-  onNavigate: (page: PageType, questionId?: number, domain?: string, navigationMode?: NavigationMode) => void;
 }
 
-export default function StudySessionPage({ config, onBack, onNavigate: _onNavigate }: StudySessionPageProps) {
+export default function StudySessionPage({ config, onBack }: StudySessionPageProps) {
   const session = useStudySession(config);
 
   if (config.questionIds.length === 0) {
     return (
-      <div className="max-w-2xl mx-auto mt-12">
-        <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-10 text-center">
-          <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Folder className="w-8 h-8 text-slate-400" />
-          </div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">No Questions Found</h2>
-          <p className="text-slate-500 dark:text-slate-400 mb-6">There are no questions matching this study mode.</p>
-          <button onClick={onBack} className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors active:scale-95">
-            Go Back
-          </button>
-        </div>
-      </div>
+      <EmptyState
+        icon={<Folder className="w-8 h-8 text-slate-400" />}
+        title="No Questions Found"
+        description="There are no questions matching this study mode."
+        actionLabel="Go Back"
+        onAction={onBack}
+      />
     );
   }
 
@@ -47,8 +46,6 @@ export default function StudySessionPage({ config, onBack, onNavigate: _onNaviga
       label={config.label}
       onAnswer={session.recordAnswer}
       onNext={session.goNext}
-      onPrev={session.currentIndex > 0 ? session.goPrev : undefined}
-      onQuit={onBack}
     />
   );
 }
@@ -60,8 +57,6 @@ function SessionQuestion({
   label,
   onAnswer,
   onNext,
-  onPrev,
-  onQuit: _onQuit,
 }: {
   questionId: number;
   currentIndex: number;
@@ -69,11 +64,10 @@ function SessionQuestion({
   label: string;
   onAnswer: (isCorrect: boolean) => void;
   onNext: () => void;
-  onPrev?: () => void;
-  onQuit: () => void;
 }) {
   const { question, loading } = useQuestion(questionId);
   const { submitAnswer, submitting } = useSubmitAnswer();
+  const { isBookmarked, toggle: toggleBookmark } = useBookmark(questionId);
   const [selectedAnswers, setSelectedAnswers] = useState<Set<string>>(new Set());
   const [showExplanation, setShowExplanation] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ isCorrect: boolean } | null>(null);
@@ -174,50 +168,28 @@ function SessionQuestion({
           </div>
         )}
 
-        <div className="space-y-3">
+        <div className="space-y-3.5">
           {options.map((option) => {
             const isSelected = selectedAnswers.has(option);
             const isCorrectOpt = correctSet.has(option);
+            const wasAnsweredIncorrectly = submitResult && !submitResult.isCorrect && isSelected;
 
-            let optStyle = 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-[#1e293b] hover:bg-slate-50 dark:hover:bg-slate-800/50';
+            let status: 'default' | 'correct' | 'incorrect' = 'default';
             if (showExplanation) {
-              if (isCorrectOpt) {
-                optStyle = 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-500/10';
-              } else if (isSelected && !isCorrectOpt) {
-                optStyle = 'border-rose-500 bg-rose-50/50 dark:bg-rose-500/10';
-              }
-            } else if (isSelected) {
-              optStyle = 'border-blue-500 bg-blue-50/50 dark:bg-blue-500/10 shadow-sm';
-            }
-
-            let circleStyle = 'border-slate-300 dark:border-slate-600 text-slate-500';
-            if (showExplanation) {
-              if (isCorrectOpt) circleStyle = 'border-emerald-500 text-emerald-600 bg-emerald-100/50';
-              else if (isSelected) circleStyle = 'border-rose-500 text-rose-600 bg-rose-100/50';
-            } else if (isSelected) {
-              circleStyle = 'border-blue-500 text-blue-600 bg-blue-100/50';
+              if (isCorrectOpt) status = 'correct';
+              else if (wasAnsweredIncorrectly) status = 'incorrect';
             }
 
             return (
-              <button
+              <OptionCard
                 key={option}
-                onClick={() => toggleAnswer(option)}
-                disabled={showExplanation}
-                className={`w-full text-left p-4 md:p-5 border-2 rounded-2xl transition-all duration-200 active:scale-[0.98] ${optStyle}`}
-              >
-                <div className="flex items-start gap-4">
-                  <div className={`flex-shrink-0 w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full border-2 font-bold text-sm md:text-base transition-colors ${circleStyle}`}>
-                    {showExplanation && isCorrectOpt ? <CheckCircle className="w-5 h-5 text-emerald-600" /> :
-                     showExplanation && isSelected && !isCorrectOpt ? <XCircle className="w-5 h-5 text-rose-600" /> :
-                     option}
-                  </div>
-                  <div className="flex-1 pt-1.5 md:pt-2">
-                    <p className="font-medium text-slate-900 dark:text-slate-100">
-                      <LatexText>{question[`option${option}`]}</LatexText>
-                    </p>
-                  </div>
-                </div>
-              </button>
+                letter={option}
+                text={question[`option${option}`] as string}
+                isSelected={isSelected}
+                status={status}
+                onClick={() => !showExplanation && toggleAnswer(option)}
+                showFeedback={showExplanation}
+              />
             );
           })}
         </div>
@@ -227,27 +199,12 @@ function SessionQuestion({
       {showExplanation && (
         <div className="space-y-4">
           {/* Result Banner */}
-          <div className={`rounded-2xl p-5 flex items-center gap-4 ${
-            submitResult?.isCorrect
-              ? 'bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20'
-              : 'bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20'
-          }`}>
-            {submitResult?.isCorrect ? (
-              <CheckCircle className="w-8 h-8 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-            ) : (
-              <XCircle className="w-8 h-8 text-rose-600 dark:text-rose-400 flex-shrink-0" />
-            )}
-            <div>
-              <p className={`font-bold text-lg ${submitResult?.isCorrect ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
-                {submitResult?.isCorrect ? 'Correct!' : 'Incorrect'}
-              </p>
-              {!submitResult?.isCorrect && (
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
-                  Correct answer: <span className="font-bold">{question.correctAnswer}</span>
-                </p>
-              )}
-            </div>
-          </div>
+          {submitResult && (
+            <ResultBanner
+              isCorrect={submitResult.isCorrect}
+              correctAnswer={question.correctAnswer}
+            />
+          )}
 
           {/* Explanations */}
           {question.whyCorrect && (
@@ -274,37 +231,16 @@ function SessionQuestion({
         </div>
       )}
 
-      {/* Fixed Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/85 dark:bg-[#0f172a]/85 backdrop-blur-lg border-t border-slate-200/60 dark:border-slate-800/60 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] safe-area-inset-bottom p-4">
-        <div className="max-w-3xl mx-auto flex gap-3">
-          {onPrev && (
-            <button
-              onClick={onPrev}
-              disabled={showExplanation}
-              className="px-5 py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors active:scale-95 disabled:opacity-50"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-          )}
-          {!showExplanation ? (
-            <button
-              onClick={handleSubmit}
-              disabled={selectedAnswers.size === 0 || submitting}
-              className="flex-1 py-4 bg-blue-600 text-white font-semibold text-lg rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm active:scale-[0.98]"
-            >
-              {submitting ? 'Submitting...' : 'Submit Answer'}
-            </button>
-          ) : (
-            <button
-              onClick={onNext}
-              className="flex-1 py-4 bg-blue-600 text-white font-semibold text-lg rounded-xl hover:bg-blue-700 transition-colors shadow-sm active:scale-[0.98] flex items-center justify-center gap-2"
-            >
-              {currentIndex < total - 1 ? 'Next Question' : 'Finish Session'}
-              <ArrowRight className="w-5 h-5" />
-            </button>
-          )}
-        </div>
-      </div>
+      {/* Sticky Action Footer */}
+      <MobileActionBar
+        onCheck={handleSubmit}
+        onNext={onNext}
+        onBookmark={toggleBookmark}
+        isBookmarked={isBookmarked}
+        canCheck={selectedAnswers.size > 0}
+        isAnswered={showExplanation}
+        isSubmitting={submitting}
+      />
     </div>
   );
 }
@@ -320,7 +256,7 @@ function SessionComplete({
   onBack: () => void;
   onRestart: () => void;
 }) {
-  const percentage = stats.answered > 0 ? Math.round((stats.correct / stats.answered) * 100) : 0;
+  const percentage = safePercent(stats.correct, stats.answered);
   const passed = percentage >= 70;
 
   return (

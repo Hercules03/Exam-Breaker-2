@@ -11,14 +11,12 @@ import { useStudyActivity } from '../hooks/useStudyActivity';
 
 interface SettingsPageProps {
   onNavigate: (page: PageType, questionId?: number, domain?: string) => void;
-  onBack: () => void;
   isDark: boolean;
   toggleDark: () => void;
 }
 
 export default function SettingsPage({
   onNavigate,
-  onBack: _onBack,
   isDark,
   toggleDark,
 }: SettingsPageProps) {

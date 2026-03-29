@@ -5,10 +5,9 @@ import { PageType } from '../App';
 
 interface ImportPageProps {
   onNavigate: (page: PageType) => void;
-  onBack: () => void;
 }
 
-export default function ImportPage({ onNavigate, onBack: _onBack }: ImportPageProps) {
+export default function ImportPage({ onNavigate }: ImportPageProps) {
   const { importFromFile, importing, error, result, reset } = useImport();
   const [file, setFile] = useState<File | null>(null);
 

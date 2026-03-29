@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { CheckCircle, XCircle, Loader, ChevronDown, ChevronUp, Lightbulb, Key, Bookmark, RotateCcw, Timer as TimerIcon, Folder, StickyNote, Flag } from 'lucide-react';
+import { CheckCircle, XCircle, Loader, Lightbulb, Key, Bookmark, RotateCcw, Timer as TimerIcon, Folder, StickyNote, Flag } from 'lucide-react';
 import { useQuestion } from '../hooks/useQuestions';
 import { useSubmitAnswer, useAnswerHistory } from '../hooks/useAnswers';
 import { useBookmark } from '../hooks/useBookmarks';
@@ -8,10 +8,13 @@ import { useFlag } from '../hooks/useFlag';
 import { PageType, NavigationMode } from '../App';
 import { QuestionService } from '../services/QuestionService';
 import { AnswerService } from '../services/AnswerService';
+import { formatTime } from '../utils/formatting';
 import LatexText from '../components/LatexText';
 import FormattedText from '../components/FormattedText';
 import { OptionCard } from '../components/OptionCard';
 import { MobileActionBar } from '../components/MobileActionBar';
+import { CollapsibleCard } from '../components/CollapsibleCard';
+import { ResultBanner } from '../components/ResultBanner';
 
 interface QuestionDetailPageProps {
   questionId: number;
@@ -19,12 +22,6 @@ interface QuestionDetailPageProps {
   onNavigate: (page: PageType, questionId?: number, domain?: string, navigationMode?: NavigationMode) => void;
   navigationMode: NavigationMode;
   selectedDomain?: string;
-}
-
-function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 export default function QuestionDetailPage({
@@ -40,15 +37,9 @@ export default function QuestionDetailPage({
   const { isBookmarked, toggle: toggleBookmark } = useBookmark(questionId);
   const { note, saving: noteSaving, saveNote } = useNote(questionId);
   const { isFlagged: isQuestionFlagged, toggle: toggleFlag } = useFlag(questionId, 'study');
-  const [showNotes, setShowNotes] = useState(false);
   const [selectedAnswers, setSelectedAnswers] = useState<Set<string>>(new Set());
   const [showExplanation, setShowExplanation] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ isCorrect: boolean } | null>(null);
-  const [showWhyCorrect, setShowWhyCorrect] = useState(false);
-  const [showWhyIncorrect, setShowWhyIncorrect] = useState(false);
-  const [showSimplified, setShowSimplified] = useState(false);
-  const [showKeywords, setShowKeywords] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
   const [secondsSpent, setSecondsSpent] = useState(0);
   const [totalQuestions, setTotalQuestions] = useState<number | null>(null);
   const [currentIndex, setCurrentIndex] = useState<number | null>(null);
@@ -77,11 +68,6 @@ export default function QuestionDetailPage({
     setSelectedAnswers(new Set());
     setShowExplanation(false);
     setSubmitResult(null);
-    setShowWhyCorrect(false);
-    setShowWhyIncorrect(false);
-    setShowSimplified(false);
-    setShowKeywords(false);
-    setShowHistory(false);
     setSecondsSpent(0);
   }, []);
 
@@ -163,12 +149,6 @@ export default function QuestionDetailPage({
       setSubmitResult(result);
       await refreshHistory();
       setShowExplanation(true);
-      
-      // Intelligent Auto-Expansion: If incorrect, show explanations automatically
-      if (!result.isCorrect) {
-        setShowWhyCorrect(true);
-        setShowWhyIncorrect(true);
-      }
     } catch (err) {
       console.error('Failed to submit answer:', err);
     }
@@ -341,206 +321,120 @@ export default function QuestionDetailPage({
       </div>
 
       {/* Result Banner */}
-      {showExplanation && (
-        <div className={`rounded-2xl shadow-sm border p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in slide-in-from-bottom-2 duration-300 ${
-          submitResult?.isCorrect 
-            ? 'bg-emerald-50/50 dark:bg-emerald-500/10 border-emerald-200/50 dark:border-emerald-500/20' 
-            : 'bg-rose-50/50 dark:bg-rose-500/10 border-rose-200/50 dark:border-rose-500/20'
-        }`}>
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              {submitResult?.isCorrect ? (
-                <>
-                  <CheckCircle className="w-7 h-7 text-emerald-600 dark:text-emerald-500" />
-                  <h3 className="text-xl font-bold text-emerald-700 dark:text-emerald-400">Correct!</h3>
-                </>
-              ) : (
-                <>
-                  <XCircle className="w-7 h-7 text-rose-600 dark:text-rose-500" />
-                  <h3 className="text-xl font-bold text-rose-700 dark:text-rose-400">Incorrect</h3>
-                </>
-              )}
-            </div>
-            <p className="text-slate-700 dark:text-slate-300 font-medium ml-10">
-              {question.correctAnswer.includes(',')
-                ? <>The correct answers are <strong>{question.correctAnswer.split(',').join(', ')}</strong></>
-                : <>The correct answer is <strong>{question.correctAnswer}</strong></>
-              }
-            </p>
-          </div>
-          
-          <button
-            onClick={handleReattempt}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors active:scale-95 shadow-sm"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Re-attempt
-          </button>
-        </div>
+      {showExplanation && submitResult && (
+        <ResultBanner
+          isCorrect={submitResult.isCorrect}
+          correctAnswer={question.correctAnswer}
+          action={
+            <button
+              onClick={handleReattempt}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors active:scale-95 shadow-sm"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Re-attempt
+            </button>
+          }
+        />
       )}
 
       {/* Explanation Cards */}
       {showExplanation && (
         <div className="space-y-4 animate-in fade-in duration-500">
-          {/* Why Correct */}
           {question.whyCorrect && (
-            <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 overflow-hidden transition-all duration-300">
-              <button
-                onClick={() => setShowWhyCorrect(!showWhyCorrect)}
-                className="w-full px-6 py-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-emerald-100 dark:bg-emerald-500/20 rounded-lg">
-                    <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Why it's Correct</h3>
-                </div>
-                {showWhyCorrect ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
-              </button>
-              {showWhyCorrect && (
-                <div className="px-6 pb-6 pt-2 text-slate-700 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-slate-800/50 mt-2">
-                  <FormattedText text={question.whyCorrect} />
-                </div>
-              )}
-            </div>
+            <CollapsibleCard
+              icon={<div className="p-2 bg-emerald-100 dark:bg-emerald-500/20 rounded-lg"><CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" /></div>}
+              title="Why it's Correct"
+              defaultOpen={submitResult ? !submitResult.isCorrect : false}
+            >
+              <div className="text-slate-700 dark:text-slate-300 leading-relaxed">
+                <FormattedText text={question.whyCorrect} />
+              </div>
+            </CollapsibleCard>
           )}
 
-          {/* Why Others Incorrect */}
           {question.whyIncorrect && (
-            <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 overflow-hidden transition-all duration-300">
-              <button
-                onClick={() => setShowWhyIncorrect(!showWhyIncorrect)}
-                className="w-full px-6 py-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-rose-100 dark:bg-rose-500/20 rounded-lg">
-                    <XCircle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Why Others are Incorrect</h3>
-                </div>
-                {showWhyIncorrect ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
-              </button>
-              {showWhyIncorrect && (
-                <div className="px-6 pb-6 pt-2 text-slate-700 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-slate-800/50 mt-2">
-                  <FormattedText text={question.whyIncorrect} />
-                </div>
-              )}
-            </div>
+            <CollapsibleCard
+              icon={<div className="p-2 bg-rose-100 dark:bg-rose-500/20 rounded-lg"><XCircle className="w-5 h-5 text-rose-600 dark:text-rose-400" /></div>}
+              title="Why Others are Incorrect"
+              defaultOpen={submitResult ? !submitResult.isCorrect : false}
+            >
+              <div className="text-slate-700 dark:text-slate-300 leading-relaxed">
+                <FormattedText text={question.whyIncorrect} />
+              </div>
+            </CollapsibleCard>
           )}
 
-          {/* Simplified */}
           {question.simplified && (
-            <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 overflow-hidden transition-all duration-300">
-              <button
-                onClick={() => setShowSimplified(!showSimplified)}
-                className="w-full px-6 py-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-amber-100 dark:bg-amber-500/20 rounded-lg">
-                    <Lightbulb className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Simplified Explanation</h3>
-                </div>
-                {showSimplified ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
-              </button>
-              {showSimplified && (
-                <div className="px-6 pb-6 pt-2 text-slate-700 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-slate-800/50 mt-2">
-                  <FormattedText text={question.simplified} />
-                </div>
-              )}
-            </div>
+            <CollapsibleCard
+              icon={<div className="p-2 bg-amber-100 dark:bg-amber-500/20 rounded-lg"><Lightbulb className="w-5 h-5 text-amber-600 dark:text-amber-400" /></div>}
+              title="Simplified Explanation"
+            >
+              <div className="text-slate-700 dark:text-slate-300 leading-relaxed">
+                <FormattedText text={question.simplified} />
+              </div>
+            </CollapsibleCard>
           )}
 
-          {/* Keywords */}
           {question.keywords && (
-            <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 overflow-hidden transition-all duration-300">
-              <button
-                onClick={() => setShowKeywords(!showKeywords)}
-                className="w-full px-6 py-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 dark:bg-purple-500/20 rounded-lg">
-                    <Key className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Key Words</h3>
-                </div>
-                {showKeywords ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
-              </button>
-              {showKeywords && (
-                <div className="px-6 pb-6 pt-2 text-slate-700 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-slate-800/50 mt-2">
-                  <FormattedText text={question.keywords} />
-                </div>
-              )}
-            </div>
+            <CollapsibleCard
+              icon={<div className="p-2 bg-purple-100 dark:bg-purple-500/20 rounded-lg"><Key className="w-5 h-5 text-purple-600 dark:text-purple-400" /></div>}
+              title="Key Words"
+            >
+              <div className="text-slate-700 dark:text-slate-300 leading-relaxed">
+                <FormattedText text={question.keywords} />
+              </div>
+            </CollapsibleCard>
           )}
         </div>
       )}
 
       {/* Answer History */}
       {history.length > 0 && (
-        <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 overflow-hidden">
-          <button
-            onClick={() => setShowHistory(!showHistory)}
-            className="w-full px-6 py-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-          >
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Previous Attempts</h3>
-            {showHistory ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
-          </button>
-          {showHistory && (
-            <div className="px-6 pb-6 pt-2 border-t border-slate-100 dark:border-slate-800/50 mt-2 space-y-3">
-              {history.map((answer, index) => (
-                <div key={answer.id} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
-                  <div className="flex items-center gap-4">
-                    {answer.isCorrect ? (
-                      <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                        <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                      </div>
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center flex-shrink-0">
-                        <XCircle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
-                      </div>
-                    )}
-                    <div>
-                      <p className="font-medium text-slate-900 dark:text-slate-100">
-                        Attempt {index + 1}: Selected {answer.selectedAnswer}
-                      </p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                        {new Date(answer.answeredAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
-                      </p>
+        <CollapsibleCard title="Previous Attempts">
+          <div className="space-y-3">
+            {history.map((answer, index) => (
+              <div key={answer.id} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
+                <div className="flex items-center gap-4">
+                  {answer.isCorrect ? (
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                      <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                     </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center flex-shrink-0">
+                      <XCircle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-medium text-slate-900 dark:text-slate-100">
+                      Attempt {index + 1}: Selected {answer.selectedAnswer}
+                    </p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                      {new Date(answer.answeredAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              </div>
+            ))}
+          </div>
+        </CollapsibleCard>
       )}
 
       {/* My Notes */}
-      <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 overflow-hidden">
-        <button
-          onClick={() => setShowNotes(!showNotes)}
-          className="w-full px-6 py-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <StickyNote className={`w-5 h-5 ${note ? 'text-amber-500' : 'text-slate-400'}`} />
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">My Notes</h3>
-            {note && <span className="w-2 h-2 rounded-full bg-amber-400" />}
-            {noteSaving && <span className="text-xs text-slate-400 ml-2">Saving...</span>}
-          </div>
-          {showNotes ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
-        </button>
-        {showNotes && (
-          <div className="px-6 pb-6 pt-2 border-t border-slate-100 dark:border-slate-800/50 mt-2">
-            <textarea
-              value={note}
-              onChange={(e) => saveNote(e.target.value)}
-              placeholder="Add your personal notes here... (e.g., &quot;Remember: ISACA perspective, not real-world&quot;)"
-              className="w-full min-h-[120px] p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm leading-relaxed"
-            />
-          </div>
-        )}
-      </div>
+      <CollapsibleCard
+        icon={<StickyNote className={`w-5 h-5 ${note ? 'text-amber-500' : 'text-slate-400'}`} />}
+        title="My Notes"
+        badge={<>
+          {note && <span className="w-2 h-2 rounded-full bg-amber-400" />}
+          {noteSaving && <span className="text-xs text-slate-400 ml-2">Saving...</span>}
+        </>}
+      >
+        <textarea
+          value={note}
+          onChange={(e) => saveNote(e.target.value)}
+          placeholder="Add your personal notes here... (e.g., &quot;Remember: ISACA perspective, not real-world&quot;)"
+          className="w-full min-h-[120px] p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm leading-relaxed"
+        />
+      </CollapsibleCard>
 
       {/* Keyboard Shortcuts Hint */}
       <div className="text-center text-sm font-medium text-slate-400 dark:text-slate-500 pb-4">

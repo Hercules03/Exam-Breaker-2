@@ -9,6 +9,8 @@ import { AnswerStatus, StudySessionConfig } from '../types/index';
 import { PageType, NavigationMode } from '../App';
 import { QuestionService } from '../services/QuestionService';
 import { ProgressService } from '../services/ProgressService';
+import { EmptyState } from '../components/EmptyState';
+import { safePercent } from '../utils/formatting';
 
 interface QuestionListPageProps {
   onSelectQuestion: (id: number, navigationMode?: NavigationMode) => void;
@@ -136,19 +138,13 @@ export default function QuestionListPage({
 
   if (domains.length === 0) {
     return (
-      <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-10 text-center max-w-lg mx-auto mt-12">
-        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Target className="w-8 h-8 text-slate-400" />
-        </div>
-        <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">No Questions Yet</h2>
-        <p className="text-slate-500 dark:text-slate-400 mb-8">Import your question bank to start studying.</p>
-        <button
-          onClick={() => onNavigate('settings')}
-          className="px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors active:scale-95 shadow-sm"
-        >
-          Import Questions
-        </button>
-      </div>
+      <EmptyState
+        icon={<Target className="w-8 h-8 text-slate-400" />}
+        title="No Questions Yet"
+        description="Import your question bank to start studying."
+        actionLabel="Import Questions"
+        onAction={() => onNavigate('settings')}
+      />
     );
   }
 
@@ -162,21 +158,14 @@ export default function QuestionListPage({
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Accuracy</span>
               <span className="text-sm font-bold text-emerald-600 dark:text-emerald-500">
-                {overallStats.questionsAnswered > 0
-                  ? Math.round((overallStats.questionsCorrect / overallStats.questionsAnswered) * 100)
-                  : 0}
-                %
+                {safePercent(overallStats.questionsCorrect, overallStats.questionsAnswered)}%
               </span>
             </div>
             <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 mb-2">
               <div
                 className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
                 style={{
-                  width: `${
-                    overallStats.questionsAnswered > 0
-                      ? Math.round((overallStats.questionsCorrect / overallStats.questionsAnswered) * 100)
-                      : 0
-                  }%`,
+                  width: `${safePercent(overallStats.questionsCorrect, overallStats.questionsAnswered)}%`,
                 }}
               ></div>
             </div>
