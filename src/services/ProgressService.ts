@@ -121,6 +121,42 @@ export class ProgressService {
   }
 
   /**
+   * Get question IDs from weak domains (below 70% mastery)
+   */
+  static async getWeakAreaQuestionIds(): Promise<number[]> {
+    const allStats = await this.getAllDomainStats();
+    const weakDomains = allStats
+      .filter((s) => s.masteryStatus !== 'notStarted' && s.masteryPercentage < 70)
+      .sort((a, b) => a.masteryPercentage - b.masteryPercentage);
+
+    if (weakDomains.length === 0) {
+      // Fallback: take lowest mastery domains that have been started
+      const started = allStats.filter((s) => s.masteryStatus !== 'notStarted');
+      if (started.length === 0) return [];
+      weakDomains.push(...started.sort((a, b) => a.masteryPercentage - b.masteryPercentage).slice(0, 2));
+    }
+
+    const ids: number[] = [];
+    for (const domain of weakDomains.slice(0, 3)) {
+      const questions = await QuestionService.getFilteredQuestions(domain.domain);
+      for (const q of questions) {
+        const status = await AnswerService.getAnswerStatus(q.id);
+        if (status === 'unanswered' || status === 'answeredIncorrectly') {
+          ids.push(q.id);
+        }
+      }
+    }
+
+    // Shuffle
+    for (let i = ids.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [ids[i], ids[j]] = [ids[j], ids[i]];
+    }
+
+    return ids;
+  }
+
+  /**
    * Get progress summary for a domain
    */
   static async getDomainProgressSummary(

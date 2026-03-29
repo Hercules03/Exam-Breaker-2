@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Settings, AlertCircle, CheckCircle, Moon, Sun, Download, Upload, ShieldAlert, Database, Info, FileJson, FileText, ArrowRight } from 'lucide-react';
+import { Settings, AlertCircle, CheckCircle, Moon, Sun, Download, Upload, ShieldAlert, Database, Info, FileJson, FileText, ArrowRight, Target } from 'lucide-react';
 import { PageType } from '../App';
 import { db } from '../db/database';
 import { QuestionService } from '../services/QuestionService';
@@ -7,6 +7,7 @@ import { AnswerService } from '../services/AnswerService';
 import { BookmarkService } from '../services/BookmarkService';
 import { ExportService } from '../services/ExportService';
 import { useImportCSV } from '../hooks/useImport';
+import { useStudyActivity } from '../hooks/useStudyActivity';
 
 interface SettingsPageProps {
   onNavigate: (page: PageType, questionId?: number, domain?: string) => void;
@@ -22,38 +23,41 @@ export default function SettingsPage({
   toggleDark,
 }: SettingsPageProps) {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [clearType, setClearType] = useState<'answers' | 'all' | null>(null);
   const [clearing, setClearing] = useState(false);
+  const [resetAnswers, setResetAnswers] = useState(false);
+  const [resetBookmarks, setResetBookmarks] = useState(false);
+  const [resetQuestions, setResetQuestions] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const backupFileInputRef = useRef<HTMLInputElement>(null);
   const csvFileInputRef = useRef<HTMLInputElement>(null);
+  const { dailyGoal, setDailyGoal } = useStudyActivity();
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const { importFromFile, importing, error: csvError, result: csvResult, reset: csvReset } = useImportCSV();
 
-  const handleClearAnswers = async () => {
-    try {
-      setClearing(true);
-      await AnswerService.clearAllAnswers();
-      setMessage({ type: 'success', text: 'All answers cleared successfully' });
-      setShowClearConfirm(false);
-      setClearType(null);
-    } catch (err) {
-      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to clear answers' });
-    } finally {
-      setClearing(false);
-    }
-  };
+  const hasResetSelection = resetAnswers || resetBookmarks || resetQuestions;
 
-  const handleClearAll = async () => {
+  const handleReset = async () => {
     try {
       setClearing(true);
-      await QuestionService.deleteAllQuestions();
-      await AnswerService.clearAllAnswers();
-      await BookmarkService.clearAll();
-      await db.importLogs.clear();
-      setMessage({ type: 'success', text: 'All data cleared successfully' });
+      const cleared: string[] = [];
+      if (resetAnswers) {
+        await AnswerService.clearAllAnswers();
+        cleared.push('answers');
+      }
+      if (resetBookmarks) {
+        await BookmarkService.clearAll();
+        cleared.push('bookmarks');
+      }
+      if (resetQuestions) {
+        await QuestionService.deleteAllQuestions();
+        await db.importLogs.clear();
+        cleared.push('questions');
+      }
+      setMessage({ type: 'success', text: `Cleared ${cleared.join(', ')} successfully` });
       setShowClearConfirm(false);
-      setClearType(null);
+      setResetAnswers(false);
+      setResetBookmarks(false);
+      setResetQuestions(false);
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to clear data' });
     } finally {
@@ -178,6 +182,27 @@ export default function SettingsPage({
               }`}
             />
           </button>
+        </div>
+
+        <div className="p-6 flex items-center justify-between border-t border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+          <div className="flex items-center gap-4">
+            <div className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl">
+              <Target className="w-5 h-5 text-orange-500" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-slate-900 dark:text-slate-100">Daily Goal</h4>
+              <p className="text-sm text-slate-500">Questions per day target</p>
+            </div>
+          </div>
+          <select
+            value={dailyGoal}
+            onChange={(e) => setDailyGoal(Number(e.target.value))}
+            className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {[5, 10, 15, 20, 30, 50, 100].map((n) => (
+              <option key={n} value={n}>{n} questions</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -323,42 +348,63 @@ export default function SettingsPage({
         </div>
       </div>
 
-      {/* Danger Zone */}
+      {/* Reset Data */}
       <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-sm border border-rose-200/50 dark:border-rose-900/30 overflow-hidden">
         <div className="p-6 border-b border-rose-100 dark:border-rose-900/20 bg-rose-50/50 dark:bg-rose-500/5">
           <h3 className="text-sm font-bold text-rose-600 dark:text-rose-500 uppercase tracking-wider flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4" /> Danger Zone
+            <ShieldAlert className="w-4 h-4" /> Reset Data
           </h3>
         </div>
 
-        <div className="divide-y divide-rose-100 dark:divide-rose-900/20">
-          <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h4 className="font-semibold text-slate-900 dark:text-slate-100">Reset Progress</h4>
-              <p className="text-sm text-slate-500 mt-1">Clear answer history but keep questions</p>
-            </div>
-            <button
-              onClick={() => { setClearType('answers'); setShowClearConfirm(true); }}
-              disabled={clearing}
-              className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 font-semibold rounded-xl hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors active:scale-95 sm:w-auto w-full"
-            >
-              Clear Progress
-            </button>
-          </div>
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-slate-500 dark:text-slate-400">Select what you want to clear:</p>
 
-          <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <label className="flex items-center gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer">
+            <input
+              type="checkbox"
+              checked={resetAnswers}
+              onChange={(e) => setResetAnswers(e.target.checked)}
+              className="w-5 h-5 rounded border-slate-300 dark:border-slate-600 text-rose-600 focus:ring-rose-500 accent-rose-600"
+            />
             <div>
-              <h4 className="font-semibold text-slate-900 dark:text-slate-100">Wipe Database</h4>
-              <p className="text-sm text-slate-500 mt-1">Delete questions, answers, and bookmarks</p>
+              <h4 className="font-semibold text-slate-900 dark:text-slate-100">Answer History</h4>
+              <p className="text-sm text-slate-500 dark:text-slate-400">All practice progress and exam results</p>
             </div>
-            <button
-              onClick={() => { setClearType('all'); setShowClearConfirm(true); }}
-              disabled={clearing}
-              className="px-5 py-2.5 bg-rose-600 text-white font-semibold rounded-xl hover:bg-rose-700 transition-colors active:scale-95 sm:w-auto w-full"
-            >
-              Delete All Data
-            </button>
-          </div>
+          </label>
+
+          <label className="flex items-center gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer">
+            <input
+              type="checkbox"
+              checked={resetBookmarks}
+              onChange={(e) => setResetBookmarks(e.target.checked)}
+              className="w-5 h-5 rounded border-slate-300 dark:border-slate-600 text-rose-600 focus:ring-rose-500 accent-rose-600"
+            />
+            <div>
+              <h4 className="font-semibold text-slate-900 dark:text-slate-100">Bookmarks</h4>
+              <p className="text-sm text-slate-500 dark:text-slate-400">All saved/flagged questions</p>
+            </div>
+          </label>
+
+          <label className="flex items-center gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer">
+            <input
+              type="checkbox"
+              checked={resetQuestions}
+              onChange={(e) => setResetQuestions(e.target.checked)}
+              className="w-5 h-5 rounded border-slate-300 dark:border-slate-600 text-rose-600 focus:ring-rose-500 accent-rose-600"
+            />
+            <div>
+              <h4 className="font-semibold text-slate-900 dark:text-slate-100">Question Bank</h4>
+              <p className="text-sm text-slate-500 dark:text-slate-400">All imported questions and import logs</p>
+            </div>
+          </label>
+
+          <button
+            onClick={() => setShowClearConfirm(true)}
+            disabled={clearing || !hasResetSelection}
+            className="w-full py-3 bg-rose-600 text-white font-semibold rounded-xl hover:bg-rose-700 transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed mt-2"
+          >
+            Reset Selected Data
+          </button>
         </div>
       </div>
 
@@ -382,21 +428,24 @@ export default function SettingsPage({
               <ShieldAlert className="w-8 h-8 text-rose-600 dark:text-rose-400" />
             </div>
             <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 text-center mb-2">Are you sure?</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-center mb-8">
-              {clearType === 'answers'
-                ? 'This will wipe all your practice history. Your questions will remain.'
-                : 'This is a hard reset. All questions, answers, and bookmarks will be permanently deleted.'}
+            <p className="text-slate-500 dark:text-slate-400 text-center mb-2">
+              This will permanently delete:
             </p>
+            <ul className="text-sm text-slate-600 dark:text-slate-300 mb-8 space-y-1 text-center">
+              {resetAnswers && <li>All answer history & progress</li>}
+              {resetBookmarks && <li>All bookmarks</li>}
+              {resetQuestions && <li>All questions & import logs</li>}
+            </ul>
             <div className="flex gap-3">
               <button
-                onClick={() => { setShowClearConfirm(false); setClearType(null); }}
+                onClick={() => setShowClearConfirm(false)}
                 disabled={clearing}
                 className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors active:scale-95"
               >
                 Cancel
               </button>
               <button
-                onClick={clearType === 'answers' ? handleClearAnswers : handleClearAll}
+                onClick={handleReset}
                 disabled={clearing}
                 className="flex-1 py-3 bg-rose-600 text-white font-semibold rounded-xl hover:bg-rose-700 transition-colors active:scale-95 disabled:opacity-50"
               >

@@ -1,21 +1,25 @@
 import { useState, useMemo } from 'react';
-import { SlidersHorizontal, Loader, Search, Bookmark, Sparkles, Target, ChevronDown, Folder } from 'lucide-react';
+import { SlidersHorizontal, Loader, Search, Bookmark, Sparkles, Target, ChevronDown, Folder, Flame, BrainCircuit, Shuffle, ListChecks } from 'lucide-react';
 import { useQuestions, useDomains } from '../hooks/useQuestions';
 import { useAnswerStatus } from '../hooks/useAnswers';
 import { useOverallStats } from '../hooks/useProgress';
 import { useBookmarkedIds } from '../hooks/useBookmarks';
-import { AnswerStatus } from '../types/index';
+import { useStudyActivity } from '../hooks/useStudyActivity';
+import { AnswerStatus, StudySessionConfig } from '../types/index';
 import { PageType, NavigationMode } from '../App';
 import { QuestionService } from '../services/QuestionService';
+import { ProgressService } from '../services/ProgressService';
 
 interface QuestionListPageProps {
   onSelectQuestion: (id: number, navigationMode?: NavigationMode) => void;
   onNavigate: (page: PageType, questionId?: number, domain?: string, navigationMode?: NavigationMode) => void;
+  onStartStudySession?: (config: StudySessionConfig) => void;
 }
 
 export default function QuestionListPage({
   onSelectQuestion,
   onNavigate,
+  onStartStudySession,
 }: QuestionListPageProps) {
   const { domains, loading: domainsLoading } = useDomains();
   const { stats: overallStats, loading: statsLoading } = useOverallStats();
@@ -23,6 +27,7 @@ export default function QuestionListPage({
   const [answerStatusFilter, setAnswerStatusFilter] = useState<AnswerStatus | undefined>();
   const { questions, loading: questionsLoading } = useQuestions(selectedDomain, answerStatusFilter);
   const { ids: bookmarkedIds } = useBookmarkedIds();
+  const { streak, todayCount, dailyGoal } = useStudyActivity();
   const [pickingRandom, setPickingRandom] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -76,6 +81,43 @@ export default function QuestionListPage({
     }
   };
 
+  const handleWeakAreaDrill = async () => {
+    if (!onStartStudySession) return;
+    setPickingRandom(true);
+    try {
+      const ids = await ProgressService.getWeakAreaQuestionIds();
+      if (ids.length > 0) {
+        onStartStudySession({ mode: 'weakArea', questionIds: ids, label: 'Weak Area Drill' });
+      }
+    } finally {
+      setPickingRandom(false);
+    }
+  };
+
+  const handleShuffleStudy = () => {
+    if (!onStartStudySession || filteredQuestions.length === 0) return;
+    const ids = [...filteredQuestions.map((q) => q.id)];
+    for (let i = ids.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [ids[i], ids[j]] = [ids[j], ids[i]];
+    }
+    onStartStudySession({ mode: 'shuffle', questionIds: ids, domain: selectedDomain, label: 'Shuffle & Study' });
+  };
+
+  const handleIncorrectDrill = async () => {
+    if (!onStartStudySession) return;
+    setPickingRandom(true);
+    try {
+      const allQ = await QuestionService.getFilteredQuestions(selectedDomain, 'answeredIncorrectly');
+      const ids = allQ.map((q) => q.id);
+      if (ids.length > 0) {
+        onStartStudySession({ mode: 'incorrect', questionIds: ids, domain: selectedDomain, label: 'Incorrect Drill' });
+      }
+    } finally {
+      setPickingRandom(false);
+    }
+  };
+
   const handleDomainChange = (domain: string) => {
     setSelectedDomain(domain === selectedDomain ? undefined : domain);
   };
@@ -113,7 +155,7 @@ export default function QuestionListPage({
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-6">
       {/* Overview Stats & Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Progress Card */}
         {overallStats && !statsLoading && (
           <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-5 col-span-1">
@@ -144,23 +186,60 @@ export default function QuestionListPage({
           </div>
         )}
 
+        {/* Streak & Daily Goal Card */}
+        <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-5 col-span-1">
+          <div className="flex items-center gap-2 mb-3">
+            <Flame className={`w-5 h-5 ${streak > 0 ? 'text-orange-500' : 'text-slate-400'}`} />
+            <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Study Streak</span>
+          </div>
+          <div className="flex items-baseline gap-1 mb-2">
+            <span className={`text-2xl font-bold ${streak > 0 ? 'text-orange-600 dark:text-orange-500' : 'text-slate-400'}`}>{streak}</span>
+            <span className="text-xs text-slate-400 font-medium">{streak === 1 ? 'day' : 'days'}</span>
+          </div>
+          <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 mb-1.5">
+            <div
+              className="bg-orange-500 h-2 rounded-full transition-all duration-500"
+              style={{ width: `${Math.min((todayCount / dailyGoal) * 100, 100)}%` }}
+            />
+          </div>
+          <div className="text-xs text-slate-400 dark:text-slate-500 font-medium">
+            {todayCount} / {dailyGoal} today
+          </div>
+        </div>
+
         {/* Quick Actions */}
-        <div className="md:col-span-2 grid grid-cols-2 gap-4">
+        <div className="col-span-2 grid grid-cols-2 gap-3">
           <button
             onClick={handleRandomPick}
             disabled={pickingRandom || domainsLoading || questionsLoading}
-            className="flex flex-col items-center justify-center p-5 bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 hover:bg-blue-50 dark:hover:bg-blue-500/10 hover:border-blue-200 dark:hover:border-blue-500/30 transition-all duration-200 active:scale-95 group disabled:opacity-50"
+            className="flex flex-col items-center justify-center p-4 bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 hover:bg-blue-50 dark:hover:bg-blue-500/10 hover:border-blue-200 dark:hover:border-blue-500/30 transition-all duration-200 active:scale-95 group disabled:opacity-50"
           >
-            <Sparkles className="w-6 h-6 text-blue-600 dark:text-blue-500 mb-2 group-hover:scale-110 transition-transform" />
-            <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">Study Random</span>
+            <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-500 mb-1.5 group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">Study Random</span>
           </button>
           <button
-            onClick={handleReviewIncorrect}
+            onClick={onStartStudySession ? handleIncorrectDrill : handleReviewIncorrect}
             disabled={pickingRandom || domainsLoading || questionsLoading}
-            className="flex flex-col items-center justify-center p-5 bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-200 dark:hover:border-rose-500/30 transition-all duration-200 active:scale-95 group disabled:opacity-50"
+            className="flex flex-col items-center justify-center p-4 bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-200 dark:hover:border-rose-500/30 transition-all duration-200 active:scale-95 group disabled:opacity-50"
           >
-            <Target className="w-6 h-6 text-rose-600 dark:text-rose-500 mb-2 group-hover:scale-110 transition-transform" />
-            <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">Review Mistakes</span>
+            <ListChecks className="w-5 h-5 text-rose-600 dark:text-rose-500 mb-1.5 group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">Drill Mistakes</span>
+          </button>
+          <button
+            onClick={handleWeakAreaDrill}
+            disabled={pickingRandom || domainsLoading || questionsLoading || !onStartStudySession}
+            className="flex flex-col items-center justify-center p-4 bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 hover:bg-purple-50 dark:hover:bg-purple-500/10 hover:border-purple-200 dark:hover:border-purple-500/30 transition-all duration-200 active:scale-95 group disabled:opacity-50"
+          >
+            <BrainCircuit className="w-5 h-5 text-purple-600 dark:text-purple-500 mb-1.5 group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">Weak Areas</span>
+          </button>
+          <button
+            onClick={handleShuffleStudy}
+            disabled={pickingRandom || domainsLoading || questionsLoading || filteredQuestions.length === 0 || !onStartStudySession}
+            className="flex flex-col items-center justify-center p-4 bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 hover:bg-amber-50 dark:hover:bg-amber-500/10 hover:border-amber-200 dark:hover:border-amber-500/30 transition-all duration-200 active:scale-95 group disabled:opacity-50"
+          >
+            <Shuffle className="w-5 h-5 text-amber-600 dark:text-amber-500 mb-1.5 group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">Shuffle & Study</span>
           </button>
         </div>
       </div>

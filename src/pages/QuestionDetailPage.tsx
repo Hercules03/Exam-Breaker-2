@@ -1,78 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { CheckCircle, XCircle, Loader, ChevronDown, ChevronUp, Lightbulb, Key, Bookmark, RotateCcw, ArrowRight, Timer as TimerIcon, Folder } from 'lucide-react';
+import { CheckCircle, XCircle, Loader, ChevronDown, ChevronUp, Lightbulb, Key, Bookmark, RotateCcw, ArrowRight, Timer as TimerIcon, Folder, StickyNote, Flag } from 'lucide-react';
 import { useQuestion } from '../hooks/useQuestions';
 import { useSubmitAnswer, useAnswerHistory } from '../hooks/useAnswers';
 import { useBookmark } from '../hooks/useBookmarks';
+import { useNote } from '../hooks/useNote';
+import { useFlag } from '../hooks/useFlag';
 import { PageType, NavigationMode } from '../App';
 import { QuestionService } from '../services/QuestionService';
 import { AnswerService } from '../services/AnswerService';
 import LatexText from '../components/LatexText';
-
-/**
- * Render multi-line text with bullet point formatting
- */
-function FormattedText({ text }: { text: string }) {
-  if (!text) return null;
-
-  return (
-    <div className="space-y-2">
-      {text.split('\n').map((line, idx) => {
-        const trimmed = line.trim();
-
-        if (!trimmed) {
-          return <div key={idx} className="h-1" />;
-        }
-
-        if (trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.startsWith('*')) {
-          const content = trimmed.replace(/^[•\-*]\s*/, '');
-          return (
-            <div key={idx} className="ml-4 flex gap-3">
-              <span className="text-slate-400 flex-shrink-0">•</span>
-              <LatexText>{content}</LatexText>
-            </div>
-          );
-        }
-
-        if (line.startsWith('\t') && (trimmed.startsWith('•') || trimmed.startsWith('-'))) {
-          const content = trimmed.replace(/^[•\-]\s*/, '');
-          return (
-            <div key={idx} className="ml-6 flex gap-3">
-              <span className="text-slate-400 flex-shrink-0">•</span>
-              <LatexText>{content}</LatexText>
-            </div>
-          );
-        }
-
-        if (trimmed.startsWith('➡')) {
-          return (
-            <p key={idx} className="text-slate-700 dark:text-slate-300 font-medium mt-2">
-              <LatexText>{trimmed}</LatexText>
-            </p>
-          );
-        }
-
-        if (trimmed === '⸻' || trimmed === '---') {
-          return <hr key={idx} className="border-slate-200 dark:border-slate-700/50 my-3" />;
-        }
-
-        const optionHeaderMatch = trimmed.match(/^([A-D])[.)]+\s+(.*)/);
-        if (optionHeaderMatch) {
-          return (
-            <p key={idx} className="font-semibold text-slate-900 dark:text-slate-100 mt-4">
-              <LatexText>{trimmed}</LatexText>
-            </p>
-          );
-        }
-
-        return (
-          <p key={idx} className="text-slate-800 dark:text-slate-200">
-            <LatexText>{trimmed}</LatexText>
-          </p>
-        );
-      })}
-    </div>
-  );
-}
+import FormattedText from '../components/FormattedText';
 
 interface QuestionDetailPageProps {
   questionId: number;
@@ -99,6 +36,9 @@ export default function QuestionDetailPage({
   const { submitAnswer, submitting, error: submitError } = useSubmitAnswer();
   const { history, refresh: refreshHistory } = useAnswerHistory(questionId);
   const { isBookmarked, toggle: toggleBookmark } = useBookmark(questionId);
+  const { note, saving: noteSaving, saveNote } = useNote(questionId);
+  const { isFlagged: isQuestionFlagged, toggle: toggleFlag } = useFlag(questionId, 'study');
+  const [showNotes, setShowNotes] = useState(false);
   const [selectedAnswers, setSelectedAnswers] = useState<Set<string>>(new Set());
   const [showExplanation, setShowExplanation] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ isCorrect: boolean } | null>(null);
@@ -331,13 +271,22 @@ export default function QuestionDetailPage({
             {formatTime(secondsSpent)}
           </div>
 
-          <button
-            onClick={toggleBookmark}
-            className="ml-auto p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors active:scale-90"
-            aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
-          >
-            <Bookmark className={`w-5 h-5 transition-colors ${isBookmarked ? 'text-yellow-500 fill-yellow-500' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`} />
-          </button>
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              onClick={toggleFlag}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors active:scale-90"
+              aria-label={isQuestionFlagged ? 'Unflag question' : 'Flag for review'}
+            >
+              <Flag className={`w-5 h-5 transition-colors ${isQuestionFlagged ? 'text-orange-500 fill-orange-500' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`} />
+            </button>
+            <button
+              onClick={toggleBookmark}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors active:scale-90"
+              aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+            >
+              <Bookmark className={`w-5 h-5 transition-colors ${isBookmarked ? 'text-yellow-500 fill-yellow-500' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`} />
+            </button>
+          </div>
         </div>
 
         <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 mb-8 leading-[1.4]">
@@ -603,6 +552,32 @@ export default function QuestionDetailPage({
           )}
         </div>
       )}
+
+      {/* My Notes */}
+      <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 overflow-hidden">
+        <button
+          onClick={() => setShowNotes(!showNotes)}
+          className="w-full px-6 py-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <StickyNote className={`w-5 h-5 ${note ? 'text-amber-500' : 'text-slate-400'}`} />
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">My Notes</h3>
+            {note && <span className="w-2 h-2 rounded-full bg-amber-400" />}
+            {noteSaving && <span className="text-xs text-slate-400 ml-2">Saving...</span>}
+          </div>
+          {showNotes ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+        </button>
+        {showNotes && (
+          <div className="px-6 pb-6 pt-2 border-t border-slate-100 dark:border-slate-800/50 mt-2">
+            <textarea
+              value={note}
+              onChange={(e) => saveNote(e.target.value)}
+              placeholder="Add your personal notes here... (e.g., &quot;Remember: ISACA perspective, not real-world&quot;)"
+              className="w-full min-h-[120px] p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm leading-relaxed"
+            />
+          </div>
+        )}
+      </div>
 
       {/* Keyboard Shortcuts Hint */}
       <div className="text-center text-sm font-medium text-slate-400 dark:text-slate-500 pb-4">

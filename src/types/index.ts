@@ -96,3 +96,44 @@ export interface ExamResult {
   domainBreakdown: { domain: string; domainName: string; correct: number; total: number }[];
   questionResults: { questionId: number; selectedAnswer: string; correctAnswer: string; isCorrect: boolean }[];
 }
+
+export interface SavedExamResult {
+  id?: number;
+  config: ExamConfig;
+  score: number;
+  totalQuestions: number;
+  percentage: number;
+  domainBreakdown: { domain: string; domainName: string; correct: number; total: number }[];
+  questionResults: { questionId: number; selectedAnswer: string; correctAnswer: string; isCorrect: boolean }[];
+  completedAt: Date;
+  duration: number;
+}
+
+export interface StudyActivity {
+  id?: number;
+  date: string;
+  questionsStudied: number;
+  questionsCorrect: number;
+}
+
+export interface QuestionNote {
+  id?: number;
+  questionId: number;
+  text: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface QuestionFlag {
+  id?: number;
+  questionId: number;
+  context: string;
+  createdAt: Date;
+}
+
+export interface StudySessionConfig {
+  mode: 'weakArea' | 'domain' | 'shuffle' | 'incorrect';
+  questionIds: number[];
+  domain?: string;
+  label: string;
+}

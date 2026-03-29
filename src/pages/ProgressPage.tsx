@@ -1,18 +1,26 @@
-import { Loader, RefreshCw, TrendingUp, Target, Award, BrainCircuit } from 'lucide-react';
+import { useState } from 'react';
+import { Loader, RefreshCw, TrendingUp, Target, Award, BrainCircuit, Timer, ChevronDown, ChevronUp } from 'lucide-react';
 import { useOverallStats, useAllDomainStats } from '../hooks/useProgress';
+import { useExamHistory } from '../hooks/useExamHistory';
+import { SavedExamResult, StudySessionConfig } from '../types/index';
 import { PageType } from '../App';
+import { QuestionService } from '../services/QuestionService';
 
 interface ProgressPageProps {
   onNavigate: (page: PageType, questionId?: number, domain?: string) => void;
   onBack: () => void;
+  onStartStudySession?: (config: StudySessionConfig) => void;
 }
 
 export default function ProgressPage({
   onNavigate,
   onBack: _onBack,
+  onStartStudySession,
 }: ProgressPageProps) {
   const { stats: overallStats, loading: overallLoading, refresh: refreshOverall } = useOverallStats();
   const { stats: domainStats, loading: domainLoading, refresh: refreshDomain } = useAllDomainStats();
+  const { results: examHistory, loading: examHistoryLoading } = useExamHistory();
+  const [expandedExam, setExpandedExam] = useState<number | null>(null);
 
   const handleRefresh = async () => {
     await Promise.all([refreshOverall(), refreshDomain()]);
@@ -228,6 +236,25 @@ export default function ProgressPage({
                     />
                   </div>
                 </div>
+
+                {onStartStudySession && (
+                  <button
+                    onClick={async () => {
+                      const questions = await QuestionService.getFilteredQuestions(domain.domain);
+                      if (questions.length > 0) {
+                        onStartStudySession({
+                          mode: 'domain',
+                          questionIds: questions.map((q) => q.id),
+                          domain: domain.domain,
+                          label: `Domain: ${domain.domainName || domain.domain}`,
+                        });
+                      }
+                    }}
+                    className="mt-3 w-full py-2 text-sm font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors active:scale-95"
+                  >
+                    Study This Domain
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -239,6 +266,74 @@ export default function ProgressPage({
         )}
       </div>
 
+      {/* Exam History */}
+      {!examHistoryLoading && examHistory.length > 0 && (
+        <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)] border border-slate-200/60 dark:border-slate-800/60 p-6 md:p-8">
+          <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-6 flex items-center gap-2">
+            <Timer className="w-5 h-5 text-slate-400" />
+            Exam History
+          </h3>
+
+          {/* Trend Line */}
+          {examHistory.length >= 2 && (
+            <ExamTrendChart results={[...examHistory].reverse().slice(-10)} />
+          )}
+
+          {/* Exam List */}
+          <div className="space-y-3 mt-4">
+            {examHistory.slice(0, 10).map((exam) => {
+              const passed = exam.percentage >= 70;
+              const isExpanded = expandedExam === exam.id;
+              return (
+                <div key={exam.id} className="bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700/50 rounded-2xl overflow-hidden">
+                  <button
+                    onClick={() => setExpandedExam(isExpanded ? null : (exam.id ?? null))}
+                    className="w-full p-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${
+                        passed
+                          ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400'
+                          : 'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400'
+                      }`}>
+                        {exam.percentage}%
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold text-slate-900 dark:text-slate-100">
+                          {exam.totalQuestions} Questions
+                          {exam.config.domain && <span className="text-slate-400 font-normal ml-1">({exam.config.domain})</span>}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {new Date(exam.completedAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                          {' '}&bull;{' '}
+                          {Math.floor(exam.duration / 60)}m {exam.duration % 60}s
+                        </p>
+                      </div>
+                    </div>
+                    {isExpanded ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+                  </button>
+                  {isExpanded && exam.domainBreakdown.length > 0 && (
+                    <div className="px-4 pb-4 pt-1 border-t border-slate-200 dark:border-slate-700/50 space-y-2">
+                      {exam.domainBreakdown.map((d) => {
+                        const pct = d.total > 0 ? Math.round((d.correct / d.total) * 100) : 0;
+                        return (
+                          <div key={d.domain} className="flex items-center justify-between text-sm">
+                            <span className="text-slate-600 dark:text-slate-400 truncate flex-1 mr-4">{d.domainName}</span>
+                            <span className={`font-bold ${pct >= 70 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                              {pct}% <span className="text-slate-400 font-normal">({d.correct}/{d.total})</span>
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Action Button */}
       {domainStats && domainStats.length > 0 && (
         <button
@@ -248,6 +343,58 @@ export default function ProgressPage({
           Continue Practice
         </button>
       )}
+    </div>
+  );
+}
+
+function ExamTrendChart({ results }: { results: SavedExamResult[] }) {
+  if (results.length < 2) return null;
+
+  const width = 300;
+  const height = 80;
+  const padding = { top: 10, right: 10, bottom: 10, left: 10 };
+  const chartW = width - padding.left - padding.right;
+  const chartH = height - padding.top - padding.bottom;
+
+  const points = results.map((r, i) => {
+    const x = padding.left + (i / (results.length - 1)) * chartW;
+    const y = padding.top + chartH - (r.percentage / 100) * chartH;
+    return { x, y, pct: r.percentage };
+  });
+
+  const polyline = points.map((p) => `${p.x},${p.y}`).join(' ');
+
+  return (
+    <div className="bg-slate-50 dark:bg-slate-800/30 rounded-xl p-4 border border-slate-200 dark:border-slate-700/50">
+      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Score Trend</p>
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" style={{ maxHeight: '80px' }}>
+        {/* 70% pass line */}
+        <line
+          x1={padding.left} y1={padding.top + chartH * 0.3}
+          x2={width - padding.right} y2={padding.top + chartH * 0.3}
+          stroke="currentColor" className="text-slate-300 dark:text-slate-600" strokeDasharray="4 4" strokeWidth="1"
+        />
+        <text x={width - padding.right - 2} y={padding.top + chartH * 0.3 - 3} textAnchor="end" className="text-slate-400 dark:text-slate-500 fill-current" fontSize="8">70%</text>
+        {/* Trend line */}
+        <polyline
+          points={polyline}
+          fill="none"
+          stroke="currentColor"
+          className="text-blue-500"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        {/* Dots */}
+        {points.map((p, i) => (
+          <circle
+            key={i}
+            cx={p.x} cy={p.y} r="4"
+            className={`${p.pct >= 70 ? 'text-emerald-500' : 'text-rose-500'} fill-current`}
+            stroke="white" strokeWidth="2"
+          />
+        ))}
+      </svg>
     </div>
   );
 }

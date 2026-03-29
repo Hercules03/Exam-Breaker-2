@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Layers, TrendingUp, SlidersHorizontal, ArrowLeft, Timer, BookOpen, Wallet } from 'lucide-react';
 import { useDarkMode } from './hooks/useDarkMode';
 import QuestionListPage from './pages/QuestionListPage';
@@ -7,8 +7,11 @@ import SettingsPage from './pages/SettingsPage';
 import QuestionDetailPage from './pages/QuestionDetailPage';
 import ExamPage from './pages/ExamPage';
 import FlashcardsPage from './pages/FlashcardsPage';
+import StudySessionPage from './pages/StudySessionPage';
+import KeyboardShortcutOverlay from './components/KeyboardShortcutOverlay';
+import { StudySessionConfig } from './types/index';
 
-export type PageType = 'list' | 'progress' | 'settings' | 'detail' | 'exam' | 'flashcards';
+export type PageType = 'list' | 'progress' | 'settings' | 'detail' | 'exam' | 'flashcards' | 'studySession';
 export type NavigationMode = 'direct' | 'random';
 
 interface NavigationState {
@@ -16,6 +19,7 @@ interface NavigationState {
   selectedQuestionId?: number;
   selectedDomain?: string;
   navigationMode?: NavigationMode;
+  studySessionConfig?: StudySessionConfig;
 }
 
 function App() {
@@ -23,6 +27,21 @@ function App() {
   const [navigationState, setNavigationState] = useState<NavigationState>({
     page: 'list',
   });
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  const handleShortcutsClose = useCallback(() => setShowShortcuts(false), []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault();
+        setShowShortcuts((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const navigateTo = (page: PageType, questionId?: number, domain?: string, navigationMode: NavigationMode = 'direct') => {
     setNavigationState({
@@ -30,6 +49,14 @@ function App() {
       selectedQuestionId: questionId,
       selectedDomain: domain,
       navigationMode,
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const navigateToStudySession = (config: StudySessionConfig) => {
+    setNavigationState({
+      page: 'studySession',
+      studySessionConfig: config,
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -45,6 +72,7 @@ function App() {
           <QuestionListPage
             onSelectQuestion={(id, navigationMode) => navigateTo('detail', id, undefined, navigationMode)}
             onNavigate={navigateTo}
+            onStartStudySession={navigateToStudySession}
           />
         );
       case 'progress':
@@ -52,6 +80,7 @@ function App() {
           <ProgressPage
             onNavigate={navigateTo}
             onBack={goBack}
+            onStartStudySession={navigateToStudySession}
           />
         );
       case 'settings':
@@ -87,13 +116,22 @@ function App() {
             selectedDomain={navigationState.selectedDomain}
           />
         );
+      case 'studySession':
+        return (
+          <StudySessionPage
+            config={navigationState.studySessionConfig!}
+            onBack={goBack}
+            onNavigate={navigateTo}
+          />
+        );
       default:
-        return <QuestionListPage onSelectQuestion={(id, navigationMode) => navigateTo('detail', id, undefined, navigationMode)} onNavigate={navigateTo} />;
+        return <QuestionListPage onSelectQuestion={(id, navigationMode) => navigateTo('detail', id, undefined, navigationMode)} onNavigate={navigateTo} onStartStudySession={navigateToStudySession} />;
     }
   };
 
   const isDetailPage = navigationState.page === 'detail';
-  const hideNav = isDetailPage;
+  const isStudySession = navigationState.page === 'studySession';
+  const hideNav = isDetailPage || isStudySession;
 
   const navItems = [
     { page: 'list' as PageType, icon: Layers, label: 'Questions' },
@@ -109,7 +147,7 @@ function App() {
       <header className="sticky top-0 z-40 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-800/60">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {isDetailPage && (
+            {(isDetailPage || isStudySession) && (
               <button
                 onClick={goBack}
                 className="p-2 -ml-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors active:scale-95"
@@ -181,6 +219,12 @@ function App() {
           </div>
         </nav>
       )}
+
+      <KeyboardShortcutOverlay
+        currentPage={navigationState.page}
+        isVisible={showShortcuts}
+        onClose={handleShortcutsClose}
+      />
     </div>
   );
 }

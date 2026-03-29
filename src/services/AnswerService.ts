@@ -1,6 +1,7 @@
 import { UserAnswer, AnswerStatus } from '../types/index';
 import { db } from '../db/database';
 import { QuestionService } from './QuestionService';
+import { StudyActivityService } from './StudyActivityService';
 
 export class AnswerService {
   /**
@@ -36,6 +37,9 @@ export class AnswerService {
     };
 
     await db.userAnswers.add(userAnswer);
+
+    // Track daily study activity
+    StudyActivityService.recordActivity(isCorrect).catch(() => {});
 
     return { isCorrect, userAnswerId: userAnswer.id };
   }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ExamConfig, ExamSession, ExamResult } from '../types/index';
 import { ExamService } from '../services/ExamService';
+import { ExamHistoryService } from '../services/ExamHistoryService';
 
 export function useExam() {
   const [session, setSession] = useState<ExamSession | null>(null);
@@ -46,11 +47,13 @@ export function useExam() {
     setLoading(true);
     try {
       const examResult = await ExamService.completeExam(session);
+      const duration = session.config.timeLimitMinutes * 60 - timeRemaining;
+      ExamHistoryService.saveResult(examResult, duration).catch(() => {});
       setResult(examResult);
     } finally {
       setLoading(false);
     }
-  }, [session]);
+  }, [session, timeRemaining]);
 
   const saveToProgress = useCallback(async () => {
     if (!session) return;

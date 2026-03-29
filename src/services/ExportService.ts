@@ -1,22 +1,28 @@
 import { db } from '../db/database';
 
 interface ExportData {
-  version: 1;
+  version: 1 | 2;
   exportedAt: string;
   userAnswers: any[];
   bookmarks: any[];
+  examResults?: any[];
+  questionNotes?: any[];
 }
 
 export class ExportService {
   static async exportProgress(): Promise<string> {
     const userAnswers = await db.userAnswers.toArray();
     const bookmarks = await db.bookmarks.toArray();
+    const examResults = await db.examResults.toArray();
+    const questionNotes = await db.questionNotes.toArray();
 
     const data: ExportData = {
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
       userAnswers,
       bookmarks,
+      examResults,
+      questionNotes,
     };
 
     return JSON.stringify(data, null, 2);
@@ -40,6 +46,14 @@ export class ExportService {
     if (data.bookmarks && data.bookmarks.length > 0) {
       await db.bookmarks.bulkPut(data.bookmarks);
       bookmarksImported = data.bookmarks.length;
+    }
+
+    if (data.examResults && data.examResults.length > 0) {
+      await db.examResults.bulkPut(data.examResults);
+    }
+
+    if (data.questionNotes && data.questionNotes.length > 0) {
+      await db.questionNotes.bulkPut(data.questionNotes);
     }
 
     return { answersImported, bookmarksImported };
