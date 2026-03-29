@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { CheckCircle, XCircle, Loader, ChevronDown, ChevronUp, Lightbulb, Key, Bookmark, RotateCcw, ArrowRight, Timer as TimerIcon, Folder, StickyNote, Flag } from 'lucide-react';
+import { CheckCircle, XCircle, Loader, ChevronDown, ChevronUp, Lightbulb, Key, Bookmark, RotateCcw, Timer as TimerIcon, Folder, StickyNote, Flag } from 'lucide-react';
 import { useQuestion } from '../hooks/useQuestions';
 import { useSubmitAnswer, useAnswerHistory } from '../hooks/useAnswers';
 import { useBookmark } from '../hooks/useBookmarks';
@@ -10,6 +10,8 @@ import { QuestionService } from '../services/QuestionService';
 import { AnswerService } from '../services/AnswerService';
 import LatexText from '../components/LatexText';
 import FormattedText from '../components/FormattedText';
+import { OptionCard } from '../components/OptionCard';
+import { MobileActionBar } from '../components/MobileActionBar';
 
 interface QuestionDetailPageProps {
   questionId: number;
@@ -310,61 +312,22 @@ export default function QuestionDetailPage({
             const wasAnsweredIncorrectly =
               submitResult && !submitResult.isCorrect && isSelected;
 
-            let bgColor = 'bg-white dark:bg-[#1e293b] hover:bg-slate-50 dark:hover:bg-slate-800/50';
-            let borderColor = 'border-slate-200 dark:border-slate-700/80';
-            let textColor = 'text-slate-900 dark:text-slate-100';
-
+            let status: 'default' | 'correct' | 'incorrect' = 'default';
             if (showExplanation) {
-              if (isCorrect) {
-                bgColor = 'bg-emerald-50/50 dark:bg-emerald-500/10';
-                borderColor = 'border-emerald-500/50 dark:border-emerald-500/30';
-                textColor = 'text-emerald-900 dark:text-emerald-100';
-              } else if (wasAnsweredIncorrectly) {
-                bgColor = 'bg-rose-50/50 dark:bg-rose-500/10';
-                borderColor = 'border-rose-500/50 dark:border-rose-500/30';
-                textColor = 'text-rose-900 dark:text-rose-100';
-              }
-            } else if (isSelected) {
-              bgColor = 'bg-blue-50/50 dark:bg-blue-500/10';
-              borderColor = 'border-blue-500';
+                if (isCorrect) status = 'correct';
+                else if (wasAnsweredIncorrectly) status = 'incorrect';
             }
 
             return (
-              <button
+              <OptionCard
                 key={option}
+                letter={option}
+                text={optionText as string}
+                isSelected={isSelected}
+                status={status}
                 onClick={() => !showExplanation && toggleAnswer(option)}
-                disabled={showExplanation || submitting}
-                className={`w-full text-left p-4 md:p-5 border-2 rounded-2xl transition-all duration-200 group ${
-                  !showExplanation ? 'active:scale-[0.98]' : 'cursor-default'
-                } ${bgColor} ${borderColor} ${
-                  isSelected && !showExplanation ? 'shadow-sm animate-pulse-subtle' : ''
-                }`}
-              >
-                <div className="flex items-start gap-4">
-                  <div className={`flex-shrink-0 w-9 h-9 md:w-11 md:h-11 flex items-center justify-center rounded-full border-2 font-bold text-base transition-colors ${
-                    showExplanation
-                      ? isCorrect
-                        ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-100/50 dark:bg-transparent'
-                        : wasAnsweredIncorrectly
-                        ? 'border-rose-500 text-rose-600 dark:text-rose-400 bg-rose-100/50 dark:bg-transparent'
-                        : 'border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500'
-                      : isSelected
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-100/50 dark:bg-transparent'
-                      : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400'
-                  }`}>
-                    {option}
-                  </div>
-                  <div className="flex-1 pt-1.5 md:pt-2.5">
-                    <p className={`font-semibold text-base md:text-lg leading-relaxed ${textColor}`}><LatexText>{optionText}</LatexText></p>
-                  </div>
-                  {showExplanation && isCorrect && (
-                    <CheckCircle className="w-7 h-7 text-emerald-500 flex-shrink-0 mt-2" />
-                  )}
-                  {showExplanation && wasAnsweredIncorrectly && (
-                    <XCircle className="w-7 h-7 text-rose-500 flex-shrink-0 mt-2" />
-                  )}
-                </div>
-              </button>
+                showFeedback={showExplanation}
+              />
             );
           })}
         </div>
@@ -585,27 +548,15 @@ export default function QuestionDetailPage({
       </div>
 
       {/* Sticky Action Footer */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/85 dark:bg-[#0f172a]/85 backdrop-blur-lg border-t border-slate-200/60 dark:border-slate-800/60 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] safe-area-inset-bottom p-4">
-        <div className="max-w-3xl mx-auto flex gap-3">
-          {!showExplanation ? (
-            <button
-              onClick={handleAnswerSubmit}
-              disabled={selectedAnswers.size === 0 || submitting}
-              className="flex-1 py-4 bg-blue-600 text-white font-semibold text-lg rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:hover:bg-blue-600 disabled:cursor-not-allowed shadow-sm active:scale-[0.98] flex items-center justify-center"
-            >
-              {submitting ? 'Submitting...' : 'Submit Answer'}
-            </button>
-          ) : (
-            <button
-              onClick={handleNextQuestion}
-              className="flex-1 py-4 bg-blue-600 text-white font-semibold text-lg rounded-xl hover:bg-blue-700 transition-colors shadow-sm active:scale-[0.98] flex items-center justify-center gap-2"
-            >
-              Next Question
-              <ArrowRight className="w-5 h-5" />
-            </button>
-          )}
-        </div>
-      </div>
+      <MobileActionBar 
+        onCheck={handleAnswerSubmit}
+        onNext={handleNextQuestion}
+        onBookmark={toggleBookmark}
+        isBookmarked={isBookmarked}
+        canCheck={selectedAnswers.size > 0}
+        isAnswered={showExplanation}
+        isSubmitting={submitting}
+      />
     </div>
   );
 }
