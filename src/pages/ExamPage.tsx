@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Timer, CheckCircle, XCircle, Loader, AlertCircle, Play, ListOrdered, Hash, Flag, ChevronDown, ChevronUp } from 'lucide-react';
+import { Timer, CheckCircle, XCircle, Loader, AlertCircle, Play, ListOrdered, Hash, Flag, ChevronDown, ChevronUp, TrendingUp, Target, Brain } from 'lucide-react';
 import { useExam } from '../hooks/useExam';
-import { useQuestion } from '../hooks/useQuestions';
 import { useDomains } from '../hooks/useQuestions';
 import { useScrollDirection } from '../hooks/useScrollDirection';
 import { useFlag, useFlaggedIds } from '../hooks/useFlag';
@@ -19,27 +18,36 @@ export default function ExamPage({ onNavigate }: ExamPageProps) {
   const exam = useExam();
 
   if (exam.result) {
-    return <ExamResults exam={exam} onNavigate={onNavigate} />;
+    return <CATExamResults exam={exam} onNavigate={onNavigate} />;
   }
 
   if (exam.session) {
-    return <ExamInProgress exam={exam} />;
+    return <CATExamInProgress exam={exam} />;
   }
 
-  return <ExamSetup exam={exam} />;
+  return <CATExamSetup exam={exam} />;
+}
+
+// Helper: compute question range from time
+function computeQuestionRange(timeLimitMinutes: number): { min: number; max: number } {
+  const min = Math.max(5, Math.round((timeLimitMinutes / 180) * 100));
+  const max = Math.max(min + 2, Math.round((timeLimitMinutes / 180) * 150));
+  return { min, max };
 }
 
 // --- Setup View ---
-function ExamSetup({ exam }: { exam: ReturnType<typeof useExam> }) {
+function CATExamSetup({ exam }: { exam: ReturnType<typeof useExam> }) {
   const { domains } = useDomains();
-  const [questionCount, setQuestionCount] = useState(25);
-  const [timeLimit, setTimeLimit] = useState(30);
+  const [timeLimit, setTimeLimit] = useState(180);
   const [domain, setDomain] = useState<string | undefined>();
+
+  const { min, max } = computeQuestionRange(timeLimit);
 
   const handleStart = () => {
     const config: ExamConfig = {
-      questionCount,
       timeLimitMinutes: timeLimit,
+      minQuestions: min,
+      maxQuestions: max,
       domain,
     };
     exam.startExam(config);
@@ -50,38 +58,22 @@ function ExamSetup({ exam }: { exam: ReturnType<typeof useExam> }) {
       <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)] border border-slate-200/60 dark:border-slate-800/60 p-8">
         <div className="flex items-center gap-4 mb-8 pb-6 border-b border-slate-100 dark:border-slate-800/50">
           <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-2xl">
-            <Timer className="w-8 h-8 text-blue-600 dark:text-blue-500" />
+            <Brain className="w-8 h-8 text-blue-600 dark:text-blue-500" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Exam Simulation</h2>
-            <p className="text-slate-500 dark:text-slate-400 mt-1">Configure your practice environment</p>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">CAT Exam Simulation</h2>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">Computerized Adaptive Testing</p>
           </div>
         </div>
 
-        <div className="space-y-8">
-          {/* Question Count */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">
-              <Hash className="w-4 h-4 text-slate-400" />
-              Number of Questions
-            </label>
-            <div className="grid grid-cols-4 gap-3">
-              {[10, 25, 50, 100].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setQuestionCount(n)}
-                  className={`py-3 rounded-xl font-medium transition-all active:scale-95 border-2 ${
-                    questionCount === n
-                      ? 'bg-blue-50/50 dark:bg-blue-500/10 border-blue-500 text-blue-700 dark:text-blue-400'
-                      : 'bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-blue-300 dark:hover:border-slate-600'
-                  }`}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-          </div>
+        {/* CAT Info */}
+        <div className="bg-blue-50/50 dark:bg-blue-500/5 border border-blue-200/50 dark:border-blue-500/20 rounded-2xl p-5 mb-8">
+          <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">
+            Questions adapt to your ability level in real-time. The exam ends early when confident in your result, or at the maximum question count. You <span className="font-semibold">cannot go back</span> to previous questions. Passing score: <span className="font-semibold">700 / 1000</span>.
+          </p>
+        </div>
 
+        <div className="space-y-8">
           {/* Time Limit */}
           <div>
             <label className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">
@@ -89,7 +81,7 @@ function ExamSetup({ exam }: { exam: ReturnType<typeof useExam> }) {
               Time Limit (minutes)
             </label>
             <div className="grid grid-cols-5 gap-2">
-              {[15, 30, 60, 90, 120].map((n) => (
+              {[15, 30, 60, 90, 180].map((n) => (
                 <button
                   key={n}
                   onClick={() => setTimeLimit(n)}
@@ -103,6 +95,9 @@ function ExamSetup({ exam }: { exam: ReturnType<typeof useExam> }) {
                 </button>
               ))}
             </div>
+            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+              Adaptive range: <span className="font-semibold text-slate-700 dark:text-slate-300">{min} - {max} questions</span>
+            </p>
           </div>
 
           {/* Domain Filter */}
@@ -151,7 +146,7 @@ function ExamSetup({ exam }: { exam: ReturnType<typeof useExam> }) {
           ) : (
             <>
               <Play className="w-5 h-5 fill-current" />
-              Begin Simulation
+              Begin CAT Simulation
             </>
           )}
         </button>
@@ -160,16 +155,15 @@ function ExamSetup({ exam }: { exam: ReturnType<typeof useExam> }) {
   );
 }
 
-// --- In Progress View ---
-function ExamInProgress({ exam }: { exam: ReturnType<typeof useExam> }) {
-  const { session, currentIndex, timeRemaining } = exam;
+// --- CAT In Progress View ---
+function CATExamInProgress({ exam }: { exam: ReturnType<typeof useExam> }) {
+  const { session, currentQuestion, timeRemaining, questionsAnswered, minQuestions, maxQuestions, selectedAnswer, setSelectedAnswer } = exam;
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
-  const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   const barHidden = useScrollDirection();
   const flagContext = session ? `exam-${session.id}` : 'exam';
-  const { ids: flaggedIds, refresh: refreshFlags } = useFlaggedIds(flagContext);
+  const { refresh: refreshFlags } = useFlaggedIds(flagContext);
 
-  if (!session || session.questionIds.length === 0) {
+  if (!session || !currentQuestion) {
     return (
       <div className="max-w-2xl mx-auto bg-white dark:bg-[#1e293b] rounded-3xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-10 text-center">
         <p className="text-slate-600 dark:text-slate-400">No questions available for this configuration.</p>
@@ -183,26 +177,35 @@ function ExamInProgress({ exam }: { exam: ReturnType<typeof useExam> }) {
     );
   }
 
-  const currentQuestionId = session.questionIds[currentIndex];
-  const answeredCount = Object.keys(session.answers).length;
-  const isTimeLow = timeRemaining <= 120; // Alert at 2 mins
+  const questionNumber = questionsAnswered + 1;
+  const isTimeLow = timeRemaining <= 120;
+  const hasAnswer = !!selectedAnswer;
 
-  const progressPercentage = (answeredCount / session.questionIds.length) * 100;
+  // Progress: show as fraction of min-max range
+  const progressPercentage = Math.min(100, (questionsAnswered / minQuestions) * 100);
+
+  const handleSubmit = async () => {
+    if (!selectedAnswer) return;
+    await exam.submitAnswer(selectedAnswer);
+  };
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-24">
-      {/* Sticky Exam Header */}
+      {/* Sticky Header */}
       <div className="sticky top-[73px] z-30 bg-white/90 dark:bg-[#1e293b]/90 backdrop-blur-md rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-4 -mx-2 px-6 sm:mx-0 sm:px-6">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-3 py-1 rounded-lg text-sm font-bold tracking-wide">
-              {currentIndex + 1} <span className="text-slate-400 font-medium">/ {session.questionIds.length}</span>
+              Q{questionNumber} <span className="text-slate-400 font-medium">of {minQuestions}-{maxQuestions}</span>
+            </span>
+            <span className="bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2.5 py-1 rounded-lg text-xs font-semibold">
+              CAT
             </span>
           </div>
-          
+
           <div className={`flex items-center gap-2 px-3 py-1 rounded-lg font-mono text-lg font-bold tracking-tight ${
-            isTimeLow 
-              ? 'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 animate-pulse' 
+            isTimeLow
+              ? 'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 animate-pulse'
               : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100'
           }`}>
             <Timer className="w-5 h-5" />
@@ -210,55 +213,23 @@ function ExamInProgress({ exam }: { exam: ReturnType<typeof useExam> }) {
           </div>
         </div>
 
-        {/* Mini Progress Bar */}
+        {/* Progress Bar */}
         <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5">
-          <div 
+          <div
             className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
             style={{ width: `${progressPercentage}%` }}
           />
         </div>
       </div>
 
-      {/* Question */}
-      <ExamQuestionWithFlag
-        questionId={currentQuestionId}
-        selectedAnswer={session.answers[currentQuestionId]}
-        onSelect={(answer) => exam.submitExamAnswer(currentQuestionId, answer)}
+      {/* Question with Flag */}
+      <CATQuestionWithFlag
+        question={currentQuestion}
+        selectedAnswer={selectedAnswer || undefined}
+        onSelect={setSelectedAnswer}
         flagContext={flagContext}
         onFlagToggle={refreshFlags}
       />
-
-      {/* Question Navigation Grid */}
-      <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-5">
-        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Question Navigator</h3>
-        <div className="flex flex-wrap gap-2">
-          {session.questionIds.map((qId, idx) => {
-            const isAnswered = !!session.answers[qId];
-            const isCurrent = idx === currentIndex;
-            const isFlagged = flaggedIds.has(qId);
-
-            let btnStyle = 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400';
-            if (isCurrent) {
-              btnStyle = 'bg-slate-900 dark:bg-slate-100 border-slate-900 dark:border-slate-100 text-white dark:text-slate-900 ring-2 ring-slate-900/20 dark:ring-slate-100/20 ring-offset-2 dark:ring-offset-[#1e293b]';
-            } else if (isAnswered) {
-              btnStyle = 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-400';
-            }
-
-            return (
-              <button
-                key={qId}
-                onClick={() => exam.goToQuestion(idx)}
-                className={`relative w-10 h-10 rounded-xl text-sm font-bold transition-all border-2 active:scale-90 ${btnStyle}`}
-              >
-                {idx + 1}
-                {isFlagged && (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-orange-400 rounded-full border-2 border-white dark:border-[#1e293b]" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
 
       {/* Fixed Bottom Action Bar */}
       <div className={`fixed left-0 right-0 z-50 px-4 pb-3 pt-2 pointer-events-none transition-all duration-300 ease-in-out ${barHidden ? 'bottom-0 translate-y-full md:bottom-0 md:translate-y-full' : 'bottom-[4.5rem] translate-y-0 md:bottom-0 md:translate-y-0'}`}>
@@ -272,28 +243,20 @@ function ExamInProgress({ exam }: { exam: ReturnType<typeof useExam> }) {
         </div>
         <div className="max-w-3xl mx-auto flex gap-3 pointer-events-auto">
           <button
-            onClick={() => exam.goToQuestion(Math.max(0, currentIndex - 1))}
-            disabled={currentIndex === 0}
-            className="px-6 py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleSubmit}
+            disabled={!hasAnswer || exam.loading}
+            className={`flex-1 py-4 font-semibold text-lg rounded-xl transition-colors shadow-sm active:scale-[0.98] ${
+              hasAnswer
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+            }`}
           >
-            Prev
+            {exam.loading ? (
+              <Loader className="w-5 h-5 animate-spin mx-auto" />
+            ) : (
+              'Submit & Continue'
+            )}
           </button>
-
-          {currentIndex < session.questionIds.length - 1 ? (
-            <button
-              onClick={() => exam.goToQuestion(currentIndex + 1)}
-              className="flex-1 py-4 bg-blue-600 text-white font-semibold text-lg rounded-xl hover:bg-blue-700 transition-colors shadow-sm active:scale-[0.98]"
-            >
-              Next Question
-            </button>
-          ) : (
-            <button
-              onClick={() => setShowFinishConfirm(true)}
-              className="flex-1 py-4 bg-emerald-600 text-white font-bold text-lg rounded-xl hover:bg-emerald-700 transition-colors shadow-sm active:scale-[0.98]"
-            >
-              Finish Exam
-            </button>
-          )}
         </div>
       </div>
 
@@ -313,46 +276,17 @@ function ExamInProgress({ exam }: { exam: ReturnType<typeof useExam> }) {
           </div>
         </div>
       )}
-
-      {/* Finish Confirmation */}
-      {showFinishConfirm && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-[60] animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-xl max-w-sm w-full p-8 border border-slate-200/50 dark:border-slate-700/50 scale-in-95">
-            <div className="w-16 h-16 bg-blue-100 dark:bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 text-center mb-2">Finish Exam?</h3>
-            <p className="text-slate-600 dark:text-slate-300 text-center mb-6 font-medium">
-              {answeredCount} of {session.questionIds.length} answered
-            </p>
-            
-            {answeredCount < session.questionIds.length && (
-              <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200/50 dark:border-amber-500/20 rounded-xl p-4 mb-6">
-                <p className="text-amber-800 dark:text-amber-400 text-sm font-medium text-center">
-                  You have <span className="font-bold">{session.questionIds.length - answeredCount}</span> unanswered questions. They will be marked as incorrect.
-                </p>
-              </div>
-            )}
-            
-            <div className="flex gap-3">
-              <button onClick={() => setShowFinishConfirm(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors active:scale-95">Review</button>
-              <button onClick={() => { setShowFinishConfirm(false); exam.finishExam(); }} className="flex-1 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-colors active:scale-95">Submit Exam</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-// --- Single Exam Question ---
-function ExamQuestion({ questionId, selectedAnswer, onSelect }: {
-  questionId: number;
+// --- Single Exam Question (uses Question object directly for CAT) ---
+function CATQuestion({ question, selectedAnswer, onSelect }: {
+  question: { stem: string; optionA: string; optionB: string; optionC: string; optionD: string; correctAnswer: string; domain: string; domainName: string };
   selectedAnswer?: string;
   onSelect: (answer: string) => void;
 }) {
-  const { question, loading } = useQuestion(questionId);
-  const isMultiAnswer = question?.correctAnswer?.includes(',') ?? false;
+  const isMultiAnswer = question.correctAnswer.includes(',');
   const selectedSet = new Set(selectedAnswer ? selectedAnswer.split(',') : []);
 
   const handleToggle = (option: string) => {
@@ -382,15 +316,8 @@ function ExamQuestion({ questionId, selectedAnswer, onSelect }: {
     return () => window.removeEventListener('keydown', handler);
   }, [selectedAnswer, isMultiAnswer]);
 
-  if (loading || !question) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader className="w-10 h-10 animate-spin text-blue-600" />
-      </div>
-    );
-  }
-
   const options = ['A', 'B', 'C', 'D'] as const;
+  const optionMap = { A: question.optionA, B: question.optionB, C: question.optionC, D: question.optionD };
 
   return (
     <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-6 md:p-8">
@@ -430,7 +357,7 @@ function ExamQuestion({ questionId, selectedAnswer, onSelect }: {
                 </div>
                 <div className="flex-1 pt-1.5 md:pt-2">
                   <p className={`font-medium ${isSelected ? 'text-blue-900 dark:text-blue-100' : 'text-slate-900 dark:text-slate-100'}`}>
-                    <LatexText>{question[`option${option}`]}</LatexText>
+                    <LatexText>{optionMap[option]}</LatexText>
                   </p>
                 </div>
               </div>
@@ -442,15 +369,15 @@ function ExamQuestion({ questionId, selectedAnswer, onSelect }: {
   );
 }
 
-// --- Exam Question with Flag button ---
-function ExamQuestionWithFlag({ questionId, selectedAnswer, onSelect, flagContext, onFlagToggle }: {
-  questionId: number;
+// --- CAT Question with Flag button ---
+function CATQuestionWithFlag({ question, selectedAnswer, onSelect, flagContext, onFlagToggle }: {
+  question: { id: number; stem: string; optionA: string; optionB: string; optionC: string; optionD: string; correctAnswer: string; domain: string; domainName: string };
   selectedAnswer?: string;
   onSelect: (answer: string) => void;
   flagContext: string;
   onFlagToggle: () => void;
 }) {
-  const { isFlagged, toggle: toggleFlag } = useFlag(questionId, flagContext);
+  const { isFlagged, toggle: toggleFlag } = useFlag(question.id, flagContext);
 
   return (
     <div className="relative">
@@ -465,13 +392,66 @@ function ExamQuestionWithFlag({ questionId, selectedAnswer, onSelect, flagContex
       >
         <Flag className={`w-5 h-5 ${isFlagged ? 'fill-current' : ''}`} />
       </button>
-      <ExamQuestion questionId={questionId} selectedAnswer={selectedAnswer} onSelect={onSelect} />
+      <CATQuestion question={question} selectedAnswer={selectedAnswer} onSelect={onSelect} />
     </div>
   );
 }
 
-// --- Results View ---
-function ExamResults({ exam, onNavigate }: { exam: ReturnType<typeof useExam>; onNavigate: (page: PageType, questionId?: number, domain?: string) => void }) {
+// --- Ability Trend Sparkline ---
+function AbilityTrendChart({ history }: { history: { questionNumber: number; ability: number; se: number }[] }) {
+  if (history.length < 2) return null;
+
+  const w = 320;
+  const h = 80;
+  const pad = { top: 10, right: 10, bottom: 10, left: 10 };
+  const chartW = w - pad.left - pad.right;
+  const chartH = h - pad.top - pad.bottom;
+
+  const abilities = history.map((h) => h.ability);
+  const minA = Math.min(...abilities, -1);
+  const maxA = Math.max(...abilities, 1);
+  const range = maxA - minA || 1;
+
+  const points = history.map((h, i) => {
+    const x = pad.left + (i / (history.length - 1)) * chartW;
+    const y = pad.top + chartH - ((h.ability - minA) / range) * chartH;
+    return `${x},${y}`;
+  });
+
+  // Passing line at theta = 2.0 (700/1000)
+  const passingTheta = 2.0;
+  const passingY = pad.top + chartH - ((passingTheta - minA) / range) * chartH;
+
+  return (
+    <svg width={w} height={h} className="w-full max-w-xs">
+      {/* Passing threshold line */}
+      {passingTheta >= minA && passingTheta <= maxA && (
+        <line x1={pad.left} y1={passingY} x2={w - pad.right} y2={passingY}
+          stroke="currentColor" className="text-emerald-400 dark:text-emerald-600" strokeWidth="1" strokeDasharray="4 3" />
+      )}
+      {/* Ability line */}
+      <polyline
+        fill="none"
+        stroke="currentColor"
+        className="text-blue-500"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={points.join(' ')}
+      />
+      {/* Final dot */}
+      {history.length > 0 && (() => {
+        const last = history[history.length - 1];
+        const x = pad.left + ((history.length - 1) / (history.length - 1)) * chartW;
+        const y = pad.top + chartH - ((last.ability - minA) / range) * chartH;
+        return <circle cx={x} cy={y} r="3" fill="currentColor" className="text-blue-600" />;
+      })()}
+    </svg>
+  );
+}
+
+// --- CAT Results View ---
+function CATExamResults({ exam, onNavigate }: { exam: ReturnType<typeof useExam>; onNavigate: (page: PageType, questionId?: number, domain?: string) => void }) {
   const { result } = exam;
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -488,20 +468,27 @@ function ExamResults({ exam, onNavigate }: { exam: ReturnType<typeof useExam>; o
     setSaving(false);
   };
 
-  const passed = result.percentage >= 70;
+  const { catData } = result;
+  const passed = catData.passed;
   const flaggedCount = flaggedIds.size;
   const luckyGuesses = result.questionResults.filter((qr) => qr.isCorrect && flaggedIds.has(qr.questionId)).length;
+
+  const terminationLabel = {
+    confidence: 'Confidence threshold met',
+    maxQuestions: 'Maximum questions reached',
+    timeUp: 'Time expired',
+  }[catData.terminationReason];
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-12">
       {/* Score Header */}
       <div className={`rounded-3xl shadow-sm border p-10 text-center relative overflow-hidden ${
-        passed 
-          ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200/50 dark:border-emerald-500/20' 
+        passed
+          ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200/50 dark:border-emerald-500/20'
           : 'bg-rose-50 dark:bg-rose-500/10 border-rose-200/50 dark:border-rose-500/20'
       }`}>
         <div className={`absolute top-0 left-0 right-0 h-2 ${passed ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-        
+
         <div className="mb-4">
           <span className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-widest ${
             passed ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400'
@@ -509,14 +496,31 @@ function ExamResults({ exam, onNavigate }: { exam: ReturnType<typeof useExam>; o
             {passed ? 'Exam Passed' : 'Needs Practice'}
           </span>
         </div>
-        
-        <div className={`text-7xl font-black tracking-tight mb-3 ${passed ? 'text-emerald-600 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-500'}`}>
-          {result.percentage}%
+
+        {/* Scaled Score */}
+        <div className={`text-7xl font-black tracking-tight mb-1 ${passed ? 'text-emerald-600 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-500'}`}>
+          {catData.scaledScore}
         </div>
-        
-        <p className="text-lg font-medium text-slate-600 dark:text-slate-400">
-          {result.score} out of {result.totalQuestions} correct
+        <p className="text-lg font-medium text-slate-400 mb-3">
+          out of 1000
         </p>
+
+        <p className="text-base font-medium text-slate-600 dark:text-slate-400">
+          {result.score} of {result.totalQuestions} correct ({result.percentage}%)
+        </p>
+
+        {/* CAT Metadata */}
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-3 text-sm">
+          <span className="flex items-center gap-1.5 px-3 py-1.5 bg-white/60 dark:bg-slate-800/60 rounded-full font-medium text-slate-600 dark:text-slate-300">
+            <Target className="w-3.5 h-3.5" />
+            {catData.questionsAttempted} of {catData.maxQuestions} max
+          </span>
+          <span className="flex items-center gap-1.5 px-3 py-1.5 bg-white/60 dark:bg-slate-800/60 rounded-full font-medium text-slate-600 dark:text-slate-300">
+            <TrendingUp className="w-3.5 h-3.5" />
+            {terminationLabel}
+          </span>
+        </div>
+
         {flaggedCount > 0 && (
           <div className="mt-4 flex items-center justify-center gap-3 text-sm">
             <span className="flex items-center gap-1.5 px-3 py-1 bg-orange-100 dark:bg-orange-500/15 text-orange-700 dark:text-orange-400 rounded-full font-medium">
@@ -531,6 +535,20 @@ function ExamResults({ exam, onNavigate }: { exam: ReturnType<typeof useExam>; o
         )}
       </div>
 
+      {/* Ability Trend */}
+      {catData.abilityHistory.length >= 2 && (
+        <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-8">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-slate-400" />
+            Ability Trend
+          </h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Your estimated ability over the course of the exam. Dashed line = passing threshold.</p>
+          <div className="flex justify-center">
+            <AbilityTrendChart history={catData.abilityHistory} />
+          </div>
+        </div>
+      )}
+
       {/* Domain Breakdown */}
       {result.domainBreakdown.length > 0 && (
         <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-8">
@@ -542,7 +560,7 @@ function ExamResults({ exam, onNavigate }: { exam: ReturnType<typeof useExam>; o
             {result.domainBreakdown.map((d) => {
               const domainPercent = safePercent(d.correct, d.total);
               const isDomainPass = domainPercent >= 70;
-              
+
               return (
                 <div key={d.domain}>
                   <div className="flex items-center justify-between mb-2">
@@ -552,7 +570,7 @@ function ExamResults({ exam, onNavigate }: { exam: ReturnType<typeof useExam>; o
                     </span>
                   </div>
                   <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
-                    <div 
+                    <div
                       className={`h-2 rounded-full transition-all ${isDomainPass ? 'bg-emerald-500' : 'bg-rose-500'}`}
                       style={{ width: `${domainPercent}%` }}
                     />

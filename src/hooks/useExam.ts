@@ -1,85 +1,107 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ExamConfig, ExamSession, ExamResult } from '../types/index';
-import { ExamService } from '../services/ExamService';
+import { ExamConfig, ExamResult, CATResultData, Question } from '../types/index';
+import { ExamService, CATSessionData } from '../services/ExamService';
 import { ExamHistoryService } from '../services/ExamHistoryService';
+import { QuestionService } from '../services/QuestionService';
 
 export function useExam() {
-  const [session, setSession] = useState<ExamSession | null>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [data, setData] = useState<CATSessionData | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
   const [timeRemaining, setTimeRemaining] = useState(0);
-  const [result, setResult] = useState<ExamResult | null>(null);
+  const [result, setResult] = useState<(ExamResult & { catData: CATResultData }) | null>(null);
   const [loading, setLoading] = useState(false);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const dataRef = useRef<CATSessionData | null>(null);
+
+  // Keep ref in sync for timer callback access
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+
+  const loadQuestion = useCallback(async (questionId: number) => {
+    const q = await QuestionService.getQuestion(questionId);
+    setCurrentQuestion(q || null);
+    setSelectedAnswer(null);
+  }, []);
 
   const startExam = useCallback(async (config: ExamConfig) => {
     setLoading(true);
     try {
-      const newSession = await ExamService.createSession(config);
-      setSession(newSession);
-      setCurrentIndex(0);
+      const sessionData = await ExamService.createSession(config);
+      setData(sessionData);
       setTimeRemaining(config.timeLimitMinutes * 60);
       setResult(null);
+      await loadQuestion(sessionData.currentQuestionId);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadQuestion]);
 
-  const submitExamAnswer = useCallback((questionId: number, answer: string) => {
-    setSession((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        answers: { ...prev.answers, [questionId]: answer },
-      };
-    });
-  }, []);
-
-  const goToQuestion = useCallback((index: number) => {
-    setCurrentIndex(index);
-  }, []);
-
-  const finishExam = useCallback(async () => {
-    if (!session) return;
+  const finishExam = useCallback(async (reason: 'confidence' | 'maxQuestions' | 'timeUp' = 'timeUp') => {
+    const current = dataRef.current;
+    if (!current) return;
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
     setLoading(true);
     try {
-      const examResult = await ExamService.completeExam(session);
-      const duration = session.config.timeLimitMinutes * 60 - timeRemaining;
-      ExamHistoryService.saveResult(examResult, duration).catch(() => {});
+      const examResult = await ExamService.completeExam(current, reason);
+      const duration = current.session.config.timeLimitMinutes * 60 - timeRemaining;
+      ExamHistoryService.saveResult(examResult, duration, examResult.catData).catch(() => {});
       setResult(examResult);
     } finally {
       setLoading(false);
     }
-  }, [session, timeRemaining]);
+  }, [timeRemaining]);
+
+  const submitAnswer = useCallback(async (answer: string) => {
+    if (!data || !currentQuestion) return;
+
+    const { data: newData, terminated } = ExamService.processAnswer(
+      data,
+      currentQuestion.id,
+      answer,
+      currentQuestion
+    );
+
+    setData(newData);
+
+    if (terminated) {
+      // Use the ref to get the latest data for finishing
+      dataRef.current = newData;
+      await finishExam(newData.catState.terminationReason || 'confidence');
+    } else {
+      await loadQuestion(newData.currentQuestionId);
+    }
+  }, [data, currentQuestion, finishExam, loadQuestion]);
 
   const saveToProgress = useCallback(async () => {
-    if (!session) return;
-    await ExamService.saveAnswersToProgress(session);
-  }, [session]);
+    if (!data) return;
+    await ExamService.saveAnswersToProgress(data.session);
+  }, [data]);
 
   const resetExam = useCallback(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    setSession(null);
-    setCurrentIndex(0);
+    setData(null);
+    setCurrentQuestion(null);
     setTimeRemaining(0);
     setResult(null);
+    setSelectedAnswer(null);
   }, []);
 
   // Timer
   useEffect(() => {
-    if (!session || result) return;
+    if (!data || result) return;
 
     timerRef.current = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
-          // Time's up - auto finish
-          finishExam();
+          finishExam('timeUp');
           return 0;
         }
         return prev - 1;
@@ -92,19 +114,24 @@ export function useExam() {
         timerRef.current = null;
       }
     };
-  }, [session, result, finishExam]);
+  }, [data, result, finishExam]);
 
   return {
-    session,
-    currentIndex,
+    session: data?.session ?? null,
+    catState: data?.catState ?? null,
+    currentQuestion,
     timeRemaining,
     result,
     loading,
+    selectedAnswer,
+    setSelectedAnswer,
     startExam,
-    submitExamAnswer,
-    goToQuestion,
+    submitAnswer,
     finishExam,
     saveToProgress,
     resetExam,
+    questionsAnswered: data?.catState.responses.length ?? 0,
+    minQuestions: data?.session.config.minQuestions ?? 0,
+    maxQuestions: data?.session.config.maxQuestions ?? 0,
   };
 }

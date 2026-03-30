@@ -74,9 +74,44 @@ export interface Bookmark {
 }
 
 export interface ExamConfig {
-  questionCount: number;
   timeLimitMinutes: number;
+  minQuestions: number;
+  maxQuestions: number;
   domain?: string;
+}
+
+export interface QuestionDifficulty {
+  questionId: number;
+  difficulty: number; // 0.0 (easy) to 1.0 (hard)
+  totalAttempts: number;
+}
+
+export interface CATState {
+  abilityEstimate: number; // theta on logit scale, starts at 0
+  standardError: number; // starts at 1.0, decreases with answers
+  answeredQuestionIds: number[];
+  responses: CATResponse[];
+  terminated: boolean;
+  terminationReason?: 'confidence' | 'maxQuestions' | 'timeUp';
+}
+
+export interface CATResponse {
+  questionId: number;
+  difficulty: number;
+  isCorrect: boolean;
+  abilityAfter: number;
+  standardErrorAfter: number;
+}
+
+export interface CATResultData {
+  finalAbility: number;
+  finalStandardError: number;
+  scaledScore: number; // 0-1000
+  passed: boolean; // scaledScore >= 700
+  questionsAttempted: number;
+  maxQuestions: number;
+  terminationReason: 'confidence' | 'maxQuestions' | 'timeUp';
+  abilityHistory: { questionNumber: number; ability: number; se: number }[];
 }
 
 export interface ExamSession {
@@ -107,6 +142,7 @@ export interface SavedExamResult {
   questionResults: { questionId: number; selectedAnswer: string; correctAnswer: string; isCorrect: boolean }[];
   completedAt: Date;
   duration: number;
+  catData?: CATResultData;
 }
 
 export interface StudyActivity {
