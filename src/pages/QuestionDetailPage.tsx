@@ -220,7 +220,7 @@ export default function QuestionDetailPage({
     : question.domain;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-24">
+    <div className="max-w-3xl mx-auto space-y-6 pb-28">
       {/* Session Progress Tracker */}
       {currentIndex && totalQuestions && (
         <div className="flex items-center justify-between px-1">

@@ -190,7 +190,7 @@ function CATExamInProgress({ exam }: { exam: ReturnType<typeof useExam> }) {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-24">
+    <div className="max-w-3xl mx-auto space-y-6 pb-40">
       {/* Sticky Header */}
       <div className="sticky top-[73px] z-30 bg-white/90 dark:bg-[#1e293b]/90 backdrop-blur-md rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-4 -mx-2 px-6 sm:mx-0 sm:px-6">
         <div className="flex items-center justify-between mb-3">

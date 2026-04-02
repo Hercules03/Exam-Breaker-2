@@ -173,7 +173,7 @@ export default function FlashcardsPage({ onBack }: FlashcardsPageProps) {
   const isLast = currentIndex === cards.length - 1;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-24">
+    <div className="max-w-2xl mx-auto space-y-6 pb-40">
       {/* Header Bar */}
       <div className="bg-white/90 dark:bg-[#1e293b]/90 backdrop-blur-md rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-4">
         <div className="flex items-center justify-between mb-3">
@@ -271,8 +271,8 @@ export default function FlashcardsPage({ onBack }: FlashcardsPageProps) {
       )}
 
       {/* Navigation */}
-      <div className="fixed bottom-[4.5rem] md:bottom-0 left-0 right-0 z-50 px-4 pb-3 pt-2 pointer-events-none">
-        <div className="max-w-2xl mx-auto flex gap-3 pointer-events-auto">
+      <div className="fixed bottom-[4.5rem] md:bottom-0 left-0 right-0 z-50 px-4 pb-3 pt-2 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-xl border-t border-slate-200/60 dark:border-slate-800/60">
+        <div className="max-w-2xl mx-auto flex gap-3">
           <button
             onClick={handlePrev}
             disabled={currentIndex === 0}

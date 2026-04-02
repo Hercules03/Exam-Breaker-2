@@ -75,7 +75,7 @@ export default function ProgressPage({
     : 0;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-24">
+    <div className="max-w-4xl mx-auto space-y-6 pb-6">
       {/* Overall Stats */}
       {overallStats && (
         <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)] border border-slate-200/60 dark:border-slate-800/60 p-6 md:p-8">
