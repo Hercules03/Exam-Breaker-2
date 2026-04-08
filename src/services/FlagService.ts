@@ -24,7 +24,4 @@ export class FlagService {
     return new Set(flags.map((f) => f.questionId));
   }
 
-  static async clearFlags(context: string): Promise<void> {
-    await db.questionFlags.where('context').equals(context).delete();
-  }
 }

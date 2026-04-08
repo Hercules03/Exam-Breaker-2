@@ -57,13 +57,6 @@ export class StudyActivityService {
     return streak;
   }
 
-  static async getHistory(days: number): Promise<StudyActivity[]> {
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - days);
-    const cutoffStr = cutoff.toISOString().split('T')[0];
-    return db.studyActivity.where('date').aboveOrEqual(cutoffStr).sortBy('date');
-  }
-
   static getDailyGoal(): number {
     const stored = localStorage.getItem(DAILY_GOAL_KEY);
     return stored ? parseInt(stored, 10) : 20;

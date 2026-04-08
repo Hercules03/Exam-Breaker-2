@@ -21,15 +21,4 @@ export class ExamHistoryService {
     return db.examResults.orderBy('completedAt').reverse().toArray();
   }
 
-  static async getResultById(id: number): Promise<SavedExamResult | undefined> {
-    return db.examResults.get(id);
-  }
-
-  static async deleteResult(id: number): Promise<void> {
-    await db.examResults.delete(id);
-  }
-
-  static async clearAll(): Promise<void> {
-    await db.examResults.clear();
-  }
 }

@@ -97,13 +97,6 @@ export class QuestionService {
   }
 
   /**
-   * Add a single question
-   */
-  static async addQuestion(question: Question): Promise<number> {
-    return db.questions.add(question);
-  }
-
-  /**
    * Delete all questions
    */
   static async deleteAllQuestions(): Promise<void> {

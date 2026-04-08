@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
-import { Settings, AlertCircle, CheckCircle, Moon, Sun, Download, Upload, ShieldAlert, Database, Info, FileJson, FileText, ArrowRight, Target } from 'lucide-react';
+import { Settings, AlertCircle, CheckCircle, Moon, Sun, Download, Upload, ShieldAlert, Database, Info, FileJson, FileText, ArrowRight, Target, ChevronDown, ChevronUp } from 'lucide-react';
+import { ParseError } from '../types/index';
 import { PageType } from '../App';
 import { db } from '../db/database';
 import { QuestionService } from '../services/QuestionService';
@@ -30,7 +31,20 @@ export default function SettingsPage({
   const csvFileInputRef = useRef<HTMLInputElement>(null);
   const { dailyGoal, setDailyGoal } = useStudyActivity();
   const [csvFile, setCsvFile] = useState<File | null>(null);
-  const { importFromFile, importing, error: csvError, result: csvResult, reset: csvReset } = useImportCSV();
+  const { importFromFile, importing, error: csvError, parseErrors, result: csvResult, reset: csvReset } = useImportCSV();
+  const [showSkippedDetails, setShowSkippedDetails] = useState(false);
+
+  const formatParseError = (err: ParseError): string => {
+    switch (err.type) {
+      case 'missingFieldId': return 'Missing question number (No.)';
+      case 'missingFieldQuestion': return 'Missing question text';
+      case 'missingFieldAnswer': return 'Missing one or more options (A-D)';
+      case 'missingFieldDomain': return 'Missing domain';
+      case 'invalidAnswerFormat': return `Invalid answer format: "${err.value}"`;
+      case 'malformedRow': return 'Malformed row (could not parse)';
+      case 'encodingError': return err.details;
+    }
+  };
 
   const hasResetSelection = resetAnswers || resetBookmarks || resetQuestions;
 
@@ -273,6 +287,33 @@ export default function SettingsPage({
                 Imported {csvResult.questionsImported} questions.
                 {csvResult.questionsSkipped > 0 && ` Skipped ${csvResult.questionsSkipped}.`}
               </p>
+
+              {csvResult.questionsSkipped > 0 && parseErrors.length > 0 && (
+                <div className="w-full mb-3">
+                  <button
+                    onClick={() => setShowSkippedDetails(!showSkippedDetails)}
+                    className="text-sm text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1 mx-auto hover:underline"
+                  >
+                    {showSkippedDetails ? 'Hide' : 'Show'} skipped details
+                    {showSkippedDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+                  {showSkippedDetails && (
+                    <div className="mt-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl p-4 text-left max-h-60 overflow-y-auto">
+                      <div className="space-y-1.5">
+                        {parseErrors.map((err, i) => (
+                          <div key={i} className="text-xs text-amber-800 dark:text-amber-300 flex gap-2">
+                            {'row' in err && (
+                              <span className="font-mono font-bold whitespace-nowrap">Row {err.row}:</span>
+                            )}
+                            <span>{formatParseError(err)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <button
                 onClick={() => onNavigate('list')}
                 className="px-5 py-2 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-colors active:scale-95 shadow-sm text-sm"

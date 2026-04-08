@@ -101,26 +101,6 @@ export class ProgressService {
   }
 
   /**
-   * Get domains ordered by mastery status priority (needsReview > progressing > mastered > notStarted)
-   */
-  static async getDomainsPrioritized(): Promise<DomainStats[]> {
-    const allStats = await this.getAllDomainStats();
-
-    const statusPriority: { [key in MasteryStatus]: number } = {
-      needsReview: 0,
-      progressing: 1,
-      mastered: 2,
-      notStarted: 3,
-    };
-
-    return allStats.sort((a, b) => {
-      const priorityDiff = statusPriority[a.masteryStatus] - statusPriority[b.masteryStatus];
-      if (priorityDiff !== 0) return priorityDiff;
-      return a.domain.localeCompare(b.domain);
-    });
-  }
-
-  /**
    * Get question IDs from weak domains (below 70% mastery)
    */
   static async getWeakAreaQuestionIds(): Promise<number[]> {
@@ -156,30 +136,4 @@ export class ProgressService {
     return ids;
   }
 
-  /**
-   * Get progress summary for a domain
-   */
-  static async getDomainProgressSummary(
-    domain: string
-  ): Promise<{
-    domain: string;
-    progress: number; // 0-100
-    status: MasteryStatus;
-    answeredCount: number;
-    totalCount: number;
-    correctCount: number;
-  }> {
-    const stats = await this.getDomainStats(domain);
-    const progress = stats.totalQuestions > 0 ?
-      Math.round((stats.questionsAnswered / stats.totalQuestions) * 100) : 0;
-
-    return {
-      domain: stats.domain,
-      progress,
-      status: stats.masteryStatus,
-      answeredCount: stats.questionsAnswered,
-      totalCount: stats.totalQuestions,
-      correctCount: stats.questionsCorrect,
-    };
-  }
 }

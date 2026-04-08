@@ -24,11 +24,4 @@ export class NoteService {
     await db.questionNotes.where('questionId').equals(questionId).delete();
   }
 
-  static async getAllNotes(): Promise<QuestionNote[]> {
-    return db.questionNotes.toArray();
-  }
-
-  static async clearAll(): Promise<void> {
-    await db.questionNotes.clear();
-  }
 }
