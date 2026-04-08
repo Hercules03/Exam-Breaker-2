@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Download, Upload as UploadIcon, CheckCircle, AlertCircle, FileText, Settings, ShieldAlert, ArrowRight } from 'lucide-react';
+import { Download, Upload as UploadIcon, CheckCircle, AlertCircle, FileText, Settings, ShieldAlert, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { ParseError } from '../types/index';
 import { useImportCSV as useImport } from '../hooks/useImport';
 import { PageType } from '../App';
 
@@ -8,8 +9,21 @@ interface ImportPageProps {
 }
 
 export default function ImportPage({ onNavigate }: ImportPageProps) {
-  const { importFromFile, importing, error, result, reset } = useImport();
+  const { importFromFile, importing, error, parseErrors, result, reset } = useImport();
   const [file, setFile] = useState<File | null>(null);
+  const [showSkippedDetails, setShowSkippedDetails] = useState(false);
+
+  const formatParseError = (err: ParseError): string => {
+    switch (err.type) {
+      case 'missingFieldId': return 'Missing question number (No.)';
+      case 'missingFieldQuestion': return 'Missing question text';
+      case 'missingFieldAnswer': return 'Missing one or more options (A-D)';
+      case 'missingFieldDomain': return 'Missing domain';
+      case 'invalidAnswerFormat': return `Invalid answer format: "${err.value}"`;
+      case 'malformedRow': return 'Malformed row (could not parse)';
+      case 'encodingError': return err.details;
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -113,6 +127,33 @@ export default function ImportPage({ onNavigate }: ImportPageProps) {
                 Imported {result.questionsImported} questions.
                 {result.questionsSkipped > 0 && ` Skipped ${result.questionsSkipped}.`}
               </p>
+
+              {result.questionsSkipped > 0 && parseErrors.length > 0 && (
+                <div className="w-full mb-4">
+                  <button
+                    onClick={() => setShowSkippedDetails(!showSkippedDetails)}
+                    className="text-sm text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1 mx-auto hover:underline"
+                  >
+                    {showSkippedDetails ? 'Hide' : 'Show'} skipped details
+                    {showSkippedDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+                  {showSkippedDetails && (
+                    <div className="mt-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl p-4 text-left max-h-60 overflow-y-auto">
+                      <div className="space-y-1.5">
+                        {parseErrors.map((err, i) => (
+                          <div key={i} className="text-xs text-amber-800 dark:text-amber-300 flex gap-2">
+                            {'row' in err && (
+                              <span className="font-mono font-bold whitespace-nowrap">Row {err.row}:</span>
+                            )}
+                            <span>{formatParseError(err)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <button
                 onClick={() => onNavigate('list')}
                 className="px-6 py-2.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-colors active:scale-95 shadow-sm"
